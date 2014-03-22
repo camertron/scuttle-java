@@ -3,22 +3,25 @@ package com.camertron.Scuttle;
 import com.camertron.SQLParser.SQLParser;
 import com.camertron.SQLParser.SQLParserBaseVisitor;
 import org.antlr.v4.runtime.misc.NotNull;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
 import java.util.ArrayList;
 
-public class SelectVisitor extends SQLParserBaseVisitor<Select> {
-  @Override public Select visitSelect_list(@NotNull SQLParser.Select_listContext ctx) {
-    SelectColumnVisitor scVisitor = new SelectColumnVisitor();
-    ArrayList<SelectColumn> alColumns = new ArrayList<SelectColumn>();
+public class SelectVisitor extends SQLParserBaseVisitor<Void> {
+  private ArrayList<String> m_alColumns = new ArrayList<String>();
 
+  @Override public Void visitSelect_list(@NotNull SQLParser.Select_listContext ctx) {
     for (SQLParser.Select_sublistContext sublistItemContext : ctx.select_sublist()) {
-      if (sublistItemContext.derived_column() != null) {
-        alColumns.add(
-          scVisitor.visit(sublistItemContext.derived_column())
-        );
-      }
+      ColumnVisitor scVisitor = new ColumnVisitor();
+      scVisitor.visit(sublistItemContext);
+      m_alColumns.add(scVisitor.toString());
     }
 
-    return new Select(alColumns);
+    return null;
+  }
+
+  public String toString() {
+    return Utils.commaize(m_alColumns);
   }
 }
