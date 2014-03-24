@@ -7,6 +7,7 @@ import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
+import java.util.ArrayList;
 import java.util.Stack;
 
 public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
@@ -14,34 +15,39 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
     UNARY, BINARY
   }
 
+  private String m_sFromTableName;
   private Stack<TerminalNodeImpl> m_stkOperatorStack;
   private Stack<String> m_stkOperandStack;
   private boolean m_bAs = false;
   private String m_sAlias;
 
-  public ValueExpressionVisitor() {
+  public ValueExpressionVisitor(String sFromTableName) {
     super();
+    m_sFromTableName = sFromTableName;
+    setup();
+  }
+
+  private void setup() {
     m_stkOperatorStack = new Stack<TerminalNodeImpl>();
     m_stkOperandStack = new Stack<String>();
   }
 
   @Override public Void visitSet_function_specification(@NotNull SQLParser.Set_function_specificationContext ctx) {
-    FunctionVisitor funcVisitor = new FunctionVisitor();
+    FunctionVisitor funcVisitor = new FunctionVisitor(m_sFromTableName);
     funcVisitor.visit(ctx);
     m_stkOperandStack.push(funcVisitor.toString());
     return null;
   }
 
   @Override public Void visitRoutine_invocation(@NotNull SQLParser.Routine_invocationContext ctx) {
-    FunctionVisitor funcVisitor = new FunctionVisitor();
+    FunctionVisitor funcVisitor = new FunctionVisitor(m_sFromTableName);
     funcVisitor.visit(ctx);
     m_stkOperandStack.push(funcVisitor.toString());
     return null;
   }
 
-  // NECESSARY?
   @Override public Void visitAggregate_function(@NotNull SQLParser.Aggregate_functionContext ctx) {
-    FunctionVisitor funcVisitor = new FunctionVisitor();
+    FunctionVisitor funcVisitor = new FunctionVisitor(m_sFromTableName);
     funcVisitor.visit(ctx);
     m_stkOperandStack.push(funcVisitor.toString());
     return null;
@@ -64,19 +70,26 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitUnsigned_numeric_literal(@NotNull SQLParser.Unsigned_numeric_literalContext ctx) {
-    m_stkOperandStack.push(ctx.getText());
+    m_stkOperandStack.push(wrapLiteral(ctx.getText()));
     visitChildren(ctx);
     return null;
   }
 
   @Override public Void visitGeneral_literal(@NotNull SQLParser.General_literalContext ctx) {
-    m_stkOperandStack.push(ctx.getText());
+    m_stkOperandStack.push(wrapLiteral(ctx.getText()));
     visitChildren(ctx);
     return null;
   }
 
+  // Literals (eg. integers, strings) won't themselves respond to
+  // .and(), .or(), .eq(), etc, so we wrap them in a special tag for later.
+  // The wrapping will be replaced with actual SqlLiteral node on toString().
+  private String wrapLiteral(String sLiteral) {
+    return "LITERAL<" + sLiteral + ">";
+  }
+
   @Override public Void visitColumn_reference(@NotNull SQLParser.Column_referenceContext ctx) {
-    ColumnVisitor cVisitor = new ColumnVisitor();
+    ColumnVisitor cVisitor = new ColumnVisitor(m_sFromTableName);
     cVisitor.visit(ctx);
     String col = cVisitor.toString();
     m_stkOperandStack.push(col);
@@ -114,8 +127,81 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
     return null;
   }
 
+  @Override public Void visitAnd_predicate(SQLParser.And_predicateContext ctx) {
+    if (ctx.children.size() == 3) {
+      processLeftRight(
+        // operator is in the middle
+        ctx.children.get(0), ctx.children.get(2), getTerminalNode(ctx.children.get(1))
+      );
+    } else {
+      visitChildren(ctx);
+    }
+
+    return null;
+  }
+
+  @Override public Void visitOr_predicate(SQLParser.Or_predicateContext ctx) {
+    if (ctx.children.size() == 3) {
+      processLeftRight(
+        // operator is in the middle
+        ctx.children.get(0), ctx.children.get(2), getTerminalNode(ctx.children.get(1))
+      );
+    } else {
+      visitChildren(ctx);
+    }
+
+    return null;
+  }
+
+  @Override public Void visitIn_predicate(SQLParser.In_predicateContext ctx) {
+    if (ctx.children.size() == 3) {
+      processLeftRight(
+        // operator is in the middle
+        ctx.children.get(0), ctx.children.get(2), getTerminalNode(ctx.children.get(1))
+      );
+    } else {
+      visitChildren(ctx);
+    }
+
+    return null;
+  }
+
+  @Override public Void visitIn_value_list(SQLParser.In_value_listContext ctx) {
+    ArrayList<String> alInList = new ArrayList<String>();
+
+    for(ParseTree child : ctx.children) {
+      ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_sFromTableName);
+      veVisitor.visit(child);
+
+      if (veVisitor.toString() != null) {
+        alInList.add(ExpressionUtils.formatOperand(veVisitor.toString(), false));
+      }
+    }
+
+    m_stkOperandStack.push(Utils.commaize(alInList));
+    return null;
+  }
+
+  // Triggered for sub-queries like you might have with an IN(), eg. WHERE id IN(SELECT id FROM foo)
+  @Override public Void visitQuery_expression(SQLParser.Query_expressionContext ctx) {
+    SqlStatementVisitor ssmtVisitor = new SqlStatementVisitor();
+    ssmtVisitor.visit(ctx);
+    m_stkOperandStack.push(ssmtVisitor.toString() + ".ast");
+    return null;
+  }
+
+  @Override public Void visitComparison_predicate(SQLParser.Comparison_predicateContext ctx) {
+    if (ctx.children.size() == 3) {
+      processLeftRight(ctx.left, ctx.right, getTerminalNode(ctx.comp_op().children.get(0)));
+    } else {
+      visitChildren(ctx);
+    }
+
+    return null;
+  }
+
   private void processLeftRight(ParseTree ptLeft, ParseTree ptRight, TerminalNodeImpl tniOperator) {
-    ValueExpressionVisitor veLeftVisitor = new ValueExpressionVisitor();
+    ValueExpressionVisitor veLeftVisitor = new ValueExpressionVisitor(m_sFromTableName);
     veLeftVisitor.visit(ptLeft);
     m_stkOperandStack.push(veLeftVisitor.toString());
 
@@ -126,7 +212,7 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
       }
 
       // push right operand
-      ValueExpressionVisitor veRightVisitor = new ValueExpressionVisitor();
+      ValueExpressionVisitor veRightVisitor = new ValueExpressionVisitor(m_sFromTableName);
       veRightVisitor.visit(ptRight);
       m_stkOperandStack.push(veRightVisitor.toString());
     }
@@ -149,13 +235,15 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
     Stack<TerminalNodeImpl> stkOperatorStack = (Stack<TerminalNodeImpl>)m_stkOperatorStack.clone();
 
     if (!stkOperandStack.empty()) {
+      TerminalNodeImpl tniOperator = null;
+
       while (!stkOperatorStack.empty()) {
-        TerminalNodeImpl tniOperator = stkOperatorStack.pop();
+        tniOperator = stkOperatorStack.pop();
 
         switch(getOperatorType(tniOperator)) {
           case BINARY:
-            String sSecondOperand = stkOperandStack.pop();
-            String sFirstOperand = stkOperandStack.pop();
+            String sSecondOperand = ExpressionUtils.formatOperand(stkOperandStack.pop(), false);
+            String sFirstOperand = ExpressionUtils.formatOperand(stkOperandStack.pop(), true);
 
             if (isMethodOperator(tniOperator)) {
               stkOperandStack.push(
@@ -177,7 +265,16 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
         }
       }
 
-      String sOperand = stkOperandStack.pop();
+      // If this operand is going to be the left-hand side of an arel method call (eg. .eq())
+      // then wrap it in a SqlLiteral via ExpressionUtils.formatOperand().
+      String sOperand;
+      if (tniOperator == null) {
+        sOperand = stkOperandStack.pop();
+      } else {
+        sOperand = ExpressionUtils.formatOperand(
+          stkOperandStack.pop(), isMethodOperator(tniOperator)
+        );
+      }
 
       // The .as() method is not available on everything, most notably Arel::Nodes::Group. Watch out.
       if (m_sAlias != null) {
@@ -198,6 +295,13 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
       case SQLParser.DIVIDE:
       case SQLParser.EQUAL:
       case SQLParser.NOT_EQUAL:
+      case SQLParser.GTH:
+      case SQLParser.LTH:
+      case SQLParser.GEQ:
+      case SQLParser.LEQ:
+      case SQLParser.AND:
+      case SQLParser.OR:
+      case SQLParser.IN:
         return OperatorType.BINARY;
       case SQLParser.LEFT_PAREN:
         return OperatorType.UNARY;
@@ -239,6 +343,8 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
         return "gteq";
       case SQLParser.LEQ:
         return "lteq";
+      case SQLParser.IN:
+        return "in";
       default:
         return null;
     }

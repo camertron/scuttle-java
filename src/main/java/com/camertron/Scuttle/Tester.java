@@ -6,8 +6,6 @@ import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 
-import java.util.Stack;
-
 public class Tester {
   public static void main(String[] args) {
     parserTest();
@@ -20,6 +18,12 @@ public class Tester {
 //    str = "SELECT MAX(phrases.created_at) FROM phrases";
 //    str = "SELECT COUNT(*) AS 'count' FROM phrases";
 //    str = "SELECT phrase.key = phrase.meta_key FROM phrases";
+//    str = "SELECT * FROM phrases WHERE (phrases.key > phrases.meta_key) AND (phrases.key = 1 OR phrases.key = 2)";
+//    str = "SELECT * FROM phrases WHERE 1 = 1";
+//    str = "SELECT id FROM phrases";
+//    str = "SELECT * FROM phrases WHERE phrases.key IN(SELECT id FROM phrases)";
+//    str = "SELECT * FROM phrases JOIN translations ON translations.id = meta_key";
+    str = "SELECT * FROM phrases ORDER BY id";
     CharStream in = new ANTLRInputStream(str);
     SQLLexer lexer = new SQLLexer(in);
     CommonTokenStream tokens = new CommonTokenStream(lexer);

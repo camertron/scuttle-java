@@ -14,6 +14,12 @@ public class FunctionVisitor extends SQLParserBaseVisitor<Void> {
   private String m_sFunctionName = "";
   private ArrayList<String> m_alArgList = new ArrayList<String>();
   private boolean m_bIsAggregate = false;
+  private String m_sFromTableName;
+
+  public FunctionVisitor(String sFromTableName) {
+    super();
+    m_sFromTableName = sFromTableName;
+  }
 
   @Override public Void visitAggregate_function(@NotNull SQLParser.Aggregate_functionContext ctx) {
     m_bIsAggregate = true;
@@ -78,7 +84,7 @@ public class FunctionVisitor extends SQLParserBaseVisitor<Void> {
 
   @Override public Void visitSet_function_type(@NotNull SQLParser.Set_function_typeContext ctx) {
     m_sFunctionName = getFunctionNameFromTerminalNode(getTerminalNode(ctx.children.get(0)));
-    m_bIsAggregate = isAggregate(getTerminalNode(ctx.children.get(0)));
+    m_bIsAggregate = isAggregateFunction(getTerminalNode(ctx.children.get(0)));
     visitChildren(ctx);
     return null;
   }
@@ -90,7 +96,7 @@ public class FunctionVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitValue_expression(@NotNull SQLParser.Value_expressionContext ctx) {
-    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor();
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_sFromTableName);
     veVisitor.visit(ctx);
     addArgument(veVisitor.toString());
     return null;
@@ -98,7 +104,7 @@ public class FunctionVisitor extends SQLParserBaseVisitor<Void> {
 
   private void addArgument(String arg) {
     if (arg != null) {
-      m_alArgList.add(arg);
+      m_alArgList.add(ExpressionUtils.formatOperand(arg, false));
     }
   }
 
@@ -117,7 +123,7 @@ public class FunctionVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   // "Aggregate" here refers to whether we use an arel named function or just call a method on the column
-  private boolean isAggregate(TerminalNodeImpl tniNode) {
+  private boolean isAggregateFunction(TerminalNodeImpl tniNode) {
     switch (tniNode.symbol.getType()) {
       case SQLParser.MAX:
       case SQLParser.MIN:
