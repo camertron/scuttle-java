@@ -8,15 +8,15 @@ import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 public class OrderVisitor extends SQLParserBaseVisitor<Void> {
   private TerminalNodeImpl m_tniOrder;
   private ColumnVisitor m_cvColumn;
-  private String m_sFromTableName;
+  private FromVisitor m_fmFromVisitor;
 
-  public OrderVisitor(String sFromTableName) {
+  public OrderVisitor(FromVisitor fmFromVisitor) {
     super();
-    m_sFromTableName = sFromTableName;
+    m_fmFromVisitor = fmFromVisitor;
   }
 
   @Override public Void visitSort_specifier(@NotNull SQLParser.Sort_specifierContext ctx) {
-    m_cvColumn = new ColumnVisitor(m_sFromTableName);
+    m_cvColumn = new ColumnVisitor(m_fmFromVisitor);
     m_cvColumn.visit(ctx);
     visitChildren(ctx);
     return null;

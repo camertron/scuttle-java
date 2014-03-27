@@ -10,11 +10,11 @@ public class ColumnVisitor extends SQLParserBaseVisitor<Void> {
   private String m_sTableName;
   private String m_sColumnName;
   private String m_sExpression;
-  private String m_sFromTableName;
+  private FromVisitor m_fmFromVisitor;
 
-  public ColumnVisitor(String sFromTableName) {
+  public ColumnVisitor(FromVisitor fmFromVisitor) {
     super();
-    m_sFromTableName = sFromTableName;
+    m_fmFromVisitor = fmFromVisitor;
   }
 
   @Override public Void visitQualified_asterisk(@NotNull SQLParser.Qualified_asteriskContext ctx) {
@@ -27,7 +27,7 @@ public class ColumnVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitDerived_column(@NotNull SQLParser.Derived_columnContext ctx) {
-    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_sFromTableName);
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
     veVisitor.visit(ctx);
     m_sExpression = veVisitor.toString();
     return null;
@@ -63,7 +63,11 @@ public class ColumnVisitor extends SQLParserBaseVisitor<Void> {
       if (sTableName == null) {
         return m_sColumnName;
       } else {
-        return sTableName + ".arel_table[" + m_sColumnName + "]";
+        if (m_fmFromVisitor != null && m_fmFromVisitor.hasSubquery()) {
+          return m_fmFromVisitor.getSubqueryIdentifier() + "[" + m_sColumnName + "]";
+        } else {
+          return sTableName + ".arel_table[" + m_sColumnName + "]";
+        }
       }
     }
   }

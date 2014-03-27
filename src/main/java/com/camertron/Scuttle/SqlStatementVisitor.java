@@ -7,14 +7,15 @@ import org.antlr.v4.runtime.misc.NotNull;
 import java.util.ArrayList;
 
 public class SqlStatementVisitor extends SQLParserBaseVisitor<Void> {
-  private String m_sFromTable = "";
+  private FromVisitor m_fmFromVisitor;
   private ArrayList<JoinVisitor> m_alJoins = new ArrayList<JoinVisitor>();
   private String m_sSelect = "";
   private String m_sWhereClause = "";
   private OrderByVisitor m_obOrderByVisitor = null;
+  private String m_sGroupByClause = "";
 
   @Override public Void visitSelect_list(@NotNull SQLParser.Select_listContext ctx) {
-    SelectVisitor selVisitor = new SelectVisitor(m_sFromTable);
+    SelectVisitor selVisitor = new SelectVisitor(m_fmFromVisitor);
     selVisitor.visit(ctx);
     m_sSelect = selVisitor.toString();
     return null;
@@ -23,27 +24,40 @@ public class SqlStatementVisitor extends SQLParserBaseVisitor<Void> {
   @Override public Void visitFrom_clause(@NotNull SQLParser.From_clauseContext ctx) {
     FromVisitor fmVisitor = new FromVisitor();
     fmVisitor.visit(ctx);
-    m_sFromTable = fmVisitor.getTableName();
+    m_fmFromVisitor = fmVisitor;
     m_alJoins.addAll(fmVisitor.getJoins());
     return null;
   }
 
   @Override public Void visitWhere_clause(@NotNull SQLParser.Where_clauseContext ctx) {
-    WhereVisitor whVisitor = new WhereVisitor(m_sFromTable);
+    WhereVisitor whVisitor = new WhereVisitor(m_fmFromVisitor);
     whVisitor.visit(ctx);
     m_sWhereClause = whVisitor.toString();
     return null;
   }
 
   @Override public Void visitOrderby_clause(@NotNull SQLParser.Orderby_clauseContext ctx) {
-    OrderByVisitor obVisitor = new OrderByVisitor(m_sFromTable);
+    OrderByVisitor obVisitor = new OrderByVisitor(m_fmFromVisitor);
     obVisitor.visit(ctx);
     m_obOrderByVisitor = obVisitor;
     return null;
   }
 
+  @Override public Void visitGroupby_clause(@NotNull SQLParser.Groupby_clauseContext ctx) {
+    GroupByVisitor gbVisitor = new GroupByVisitor(m_fmFromVisitor);
+    gbVisitor.visit(ctx);
+    m_sGroupByClause = gbVisitor.toString();
+    return null;
+  }
+
   public String toString() {
-    String sQuery = m_sFromTable + ".select(" + m_sSelect + ")";
+    ArrayList<String> alStatements = new ArrayList<String>();
+    String sQuery = m_fmFromVisitor.getModelName() + ".select(" + m_sSelect + ")";
+
+    if (m_fmFromVisitor.hasSubquery()) {
+      sQuery += ".from(" + m_fmFromVisitor.getSubquery().toString();
+      sQuery += ".as(" + Utils.quote(m_fmFromVisitor.getSubqueryIdentifier()) + "))";
+    }
 
     if (!m_sWhereClause.equals("")) {
       sQuery += ".where(" + m_sWhereClause + ")";
@@ -56,7 +70,24 @@ public class SqlStatementVisitor extends SQLParserBaseVisitor<Void> {
     }
 
     sQuery += composeOrderBy();
-    return sQuery;
+
+    if (!m_sGroupByClause.equals("")) {
+      sQuery += ".group(" + m_sGroupByClause + ")";
+    }
+
+    if (m_fmFromVisitor.hasSubquery()) {
+      String sTableRef = m_fmFromVisitor.getTableRef();
+      alStatements.add(
+        sTableRef + " = Arel::Table.new(" + Utils.quote(sTableRef) + ")"
+      );
+    }
+
+    alStatements.add(sQuery);
+    return Utils.join(alStatements, "\n");
+  }
+
+  public String getFromRef() {
+    return m_fmFromVisitor.getTableRef();
   }
 
   private String composeOrderBy() {
@@ -72,7 +103,7 @@ public class SqlStatementVisitor extends SQLParserBaseVisitor<Void> {
         if (!bAllReverseOrder && order.isReverseOrder()) {
           // Get qualified column by passing in a default table (the FROM table).
           // The column must be qualified because we're calling .desc() on it.
-          alOrderStrings.add(order.getQualifiedColumn(m_sFromTable) + ".desc");
+          alOrderStrings.add(order.getQualifiedColumn(getFromRef()) + ".desc");
         } else {
           alOrderStrings.add(order.getColumn());
         }

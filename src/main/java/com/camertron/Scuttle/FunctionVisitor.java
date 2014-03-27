@@ -14,11 +14,11 @@ public class FunctionVisitor extends SQLParserBaseVisitor<Void> {
   private String m_sFunctionName = "";
   private ArrayList<String> m_alArgList = new ArrayList<String>();
   private boolean m_bIsAggregate = false;
-  private String m_sFromTableName;
+  private FromVisitor m_fmFromVisitor;
 
-  public FunctionVisitor(String sFromTableName) {
+  public FunctionVisitor(FromVisitor fmFromVisitor) {
     super();
-    m_sFromTableName = sFromTableName;
+    m_fmFromVisitor = fmFromVisitor;
   }
 
   @Override public Void visitAggregate_function(@NotNull SQLParser.Aggregate_functionContext ctx) {
@@ -96,7 +96,7 @@ public class FunctionVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitValue_expression(@NotNull SQLParser.Value_expressionContext ctx) {
-    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_sFromTableName);
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
     veVisitor.visit(ctx);
     addArgument(veVisitor.toString());
     return null;

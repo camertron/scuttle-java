@@ -19,11 +19,15 @@ public class Utils {
   }
 
   public static String commaize(ArrayList<String> alItems) {
+    return join(alItems, ", ");
+  }
+
+  public static String join(ArrayList<String> alItems, String sDelimiter) {
     String sResult = "";
 
     for (int i = 0; i < alItems.size(); i ++) {
       if (i != 0)
-        sResult += ", ";
+        sResult += sDelimiter;
 
       sResult += alItems.get(i);
     }

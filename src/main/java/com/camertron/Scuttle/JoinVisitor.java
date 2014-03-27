@@ -11,16 +11,16 @@ import java.util.ArrayList;
 public class JoinVisitor extends SQLParserBaseVisitor<Void> {
   private String m_sTableName;
   private String m_sConditions;
-  private String m_sFromTableName;
+  private FromVisitor m_fmFromVisitor;
 
   private boolean m_bLeft = false;
   private boolean m_bRight = false;
   private boolean m_bInner = false;
   private boolean m_bOuter = false;
 
-  public JoinVisitor(String sFromTableName) {
+  public JoinVisitor(FromVisitor fmFromVisitor) {
     super();
-    m_sFromTableName = sFromTableName;
+    m_fmFromVisitor = fmFromVisitor;
   }
 
   @Override public Void visitTable_name(@NotNull SQLParser.Table_nameContext ctx) {
@@ -34,7 +34,7 @@ public class JoinVisitor extends SQLParserBaseVisitor<Void> {
       setJoinType(gatherTerminals(ctx.t));
     }
 
-    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_sFromTableName);
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
     veVisitor.visit(ctx.s);
     m_sConditions = veVisitor.toString();
     visit(ctx.right);
@@ -70,7 +70,7 @@ public class JoinVisitor extends SQLParserBaseVisitor<Void> {
 
   public String toString() {
     // this will produce an INNER JOIN
-    String sJoin = m_sFromTableName + ".arel_table.join(" + getTableName() + ".arel_table";
+    String sJoin = m_fmFromVisitor.getTableRef() + ".arel_table.join(" + getTableName() + ".arel_table";
 
     if (m_bOuter) {
       sJoin += ", Arel::Nodes::OuterJoin";

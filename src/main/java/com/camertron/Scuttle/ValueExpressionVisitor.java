@@ -15,15 +15,15 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
     UNARY, BINARY
   }
 
-  private String m_sFromTableName;
+  private FromVisitor m_fmFromVisitor;
   private Stack<TerminalNodeImpl> m_stkOperatorStack;
   private Stack<String> m_stkOperandStack;
   private boolean m_bAs = false;
   private String m_sAlias;
 
-  public ValueExpressionVisitor(String sFromTableName) {
+  public ValueExpressionVisitor(FromVisitor fmFromVisitor) {
     super();
-    m_sFromTableName = sFromTableName;
+    m_fmFromVisitor = fmFromVisitor;
     setup();
   }
 
@@ -33,21 +33,21 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitSet_function_specification(@NotNull SQLParser.Set_function_specificationContext ctx) {
-    FunctionVisitor funcVisitor = new FunctionVisitor(m_sFromTableName);
+    FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor);
     funcVisitor.visit(ctx);
     m_stkOperandStack.push(funcVisitor.toString());
     return null;
   }
 
   @Override public Void visitRoutine_invocation(@NotNull SQLParser.Routine_invocationContext ctx) {
-    FunctionVisitor funcVisitor = new FunctionVisitor(m_sFromTableName);
+    FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor);
     funcVisitor.visit(ctx);
     m_stkOperandStack.push(funcVisitor.toString());
     return null;
   }
 
   @Override public Void visitAggregate_function(@NotNull SQLParser.Aggregate_functionContext ctx) {
-    FunctionVisitor funcVisitor = new FunctionVisitor(m_sFromTableName);
+    FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor);
     funcVisitor.visit(ctx);
     m_stkOperandStack.push(funcVisitor.toString());
     return null;
@@ -89,7 +89,7 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitColumn_reference(@NotNull SQLParser.Column_referenceContext ctx) {
-    ColumnVisitor cVisitor = new ColumnVisitor(m_sFromTableName);
+    ColumnVisitor cVisitor = new ColumnVisitor(m_fmFromVisitor);
     cVisitor.visit(ctx);
     String col = cVisitor.toString();
     m_stkOperandStack.push(col);
@@ -170,7 +170,7 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
     ArrayList<String> alInList = new ArrayList<String>();
 
     for(ParseTree child : ctx.children) {
-      ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_sFromTableName);
+      ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
       veVisitor.visit(child);
 
       if (veVisitor.toString() != null) {
@@ -201,7 +201,7 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   private void processLeftRight(ParseTree ptLeft, ParseTree ptRight, TerminalNodeImpl tniOperator) {
-    ValueExpressionVisitor veLeftVisitor = new ValueExpressionVisitor(m_sFromTableName);
+    ValueExpressionVisitor veLeftVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
     veLeftVisitor.visit(ptLeft);
     m_stkOperandStack.push(veLeftVisitor.toString());
 
@@ -212,7 +212,7 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
       }
 
       // push right operand
-      ValueExpressionVisitor veRightVisitor = new ValueExpressionVisitor(m_sFromTableName);
+      ValueExpressionVisitor veRightVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
       veRightVisitor.visit(ptRight);
       m_stkOperandStack.push(veRightVisitor.toString());
     }

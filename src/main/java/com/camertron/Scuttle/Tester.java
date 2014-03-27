@@ -22,8 +22,10 @@ public class Tester {
 //    str = "SELECT * FROM phrases WHERE 1 = 1";
 //    str = "SELECT id FROM phrases";
 //    str = "SELECT * FROM phrases WHERE phrases.key IN(SELECT id FROM phrases)";
-//    str = "SELECT * FROM phrases JOIN translations ON translations.id = meta_key";
-    str = "SELECT * FROM phrases ORDER BY id";
+    str = "SELECT * FROM phrases JOIN translations ON translations.id = meta_key";
+//    str = "SELECT * FROM phrases ORDER BY id";
+//    str = "SELECT * FROM phrases GROUP BY phrases.id";
+//    str = "SELECT * FROM (SELECT COUNT(*) AS count FROM translations) tb WHERE tb.id = 1";
     CharStream in = new ANTLRInputStream(str);
     SQLLexer lexer = new SQLLexer(in);
     CommonTokenStream tokens = new CommonTokenStream(lexer);

@@ -6,15 +6,15 @@ import org.antlr.v4.runtime.misc.NotNull;
 
 public class WhereVisitor extends SQLParserBaseVisitor<Void> {
   private String m_sWhereClause;
-  private String m_sFromTableName;
+  private FromVisitor m_fmFromVisitor;
 
-  public WhereVisitor(String sFromTableName) {
+  public WhereVisitor(FromVisitor fmFromVisitor) {
     super();
-    m_sFromTableName = sFromTableName;
+    m_fmFromVisitor = fmFromVisitor;
   }
 
   @Override public Void visitWhere_clause(@NotNull SQLParser.Where_clauseContext ctx) {
-    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_sFromTableName);
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
     veVisitor.visitChildren(ctx);
     m_sWhereClause = veVisitor.toString();
     return null;

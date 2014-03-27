@@ -9,17 +9,17 @@ import java.util.ArrayList;
 
 public class OrderByVisitor extends SQLParserBaseVisitor<Void> {
   private ArrayList<OrderVisitor> m_alOrders = new ArrayList<OrderVisitor>();
-  public String m_sFromTableName;
+  public FromVisitor m_fmFromVisitor;
 
-  public OrderByVisitor(String sFromTableName) {
+  public OrderByVisitor(FromVisitor fmFromVisitor) {
     super();
-    m_sFromTableName = sFromTableName;
+    m_fmFromVisitor = fmFromVisitor;
   }
 
   @Override public Void visitSort_specifier_list(@NotNull SQLParser.Sort_specifier_listContext ctx) {
     for(ParseTree child : ctx.children) {
       if (child.getClass() == SQLParser.Sort_specifierContext.class) {
-        OrderVisitor odrVisitor = new OrderVisitor(m_sFromTableName);
+        OrderVisitor odrVisitor = new OrderVisitor(m_fmFromVisitor);
         odrVisitor.visit(child);
         m_alOrders.add(odrVisitor);
       }
