@@ -352,7 +352,7 @@ public class Inflector {
     singulars.add(0, new ReplacementRule("(octop|vir)i$", "$1us"));
     singulars.add(0, new ReplacementRule("(alias|status)es$", "$1"));
     singulars.add(0, new ReplacementRule("(ox)en$", "$1"));
-    singulars.add(0, new ReplacementRule("(virt|ind)ices$", "$1ex"));
+    singulars.add(0, new ReplacementRule("(vert|ind)ices$", "$1ex"));
     singulars.add(0, new ReplacementRule("(matr)ices$", "$1ix"));
     singulars.add(0, new ReplacementRule("(quiz)zes$", "$1"));
     singulars.add(0, new ReplacementRule("(database)s$", "$1"));
