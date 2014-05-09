@@ -9,8 +9,17 @@ import java.util.ArrayList;
 public class FromVisitor extends SQLParserBaseVisitor<Void> {
   private String m_sTableName;
   private String m_sSubqueryIdentifier;
-  private SqlStatementVisitor m_stmtSubquery;
+  private SelectFromVisitor m_stmtSubquery;
   private ArrayList<JoinVisitor> m_alJoins = new ArrayList<JoinVisitor>();
+
+  public FromVisitor() {
+    super();
+  }
+
+  public FromVisitor(String sTableName) {
+    super();
+    m_sTableName = sTableName;
+  }
 
   @Override public Void visitTable_primary(@NotNull SQLParser.Table_primaryContext ctx) {
     if (ctx.table_or_query_name() != null) {
@@ -33,7 +42,7 @@ public class FromVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitTable_subquery(@NotNull SQLParser.Table_subqueryContext ctx) {
-    SqlStatementVisitor ssVisitor = new SqlStatementVisitor();
+    SelectFromVisitor ssVisitor = new SelectFromVisitor();
     ssVisitor.visit(ctx);
     m_stmtSubquery = ssVisitor;
     return null;
@@ -63,7 +72,7 @@ public class FromVisitor extends SQLParserBaseVisitor<Void> {
 
   public String getModelName() {
     return Utils.camelize(
-      Inflector.dePluralize(getTableName())
+      Inflector.singularize(getTableName())
     );
   }
 
@@ -72,7 +81,7 @@ public class FromVisitor extends SQLParserBaseVisitor<Void> {
       return getSubqueryIdentifier();
     } else {
       return Utils.camelize(
-        Inflector.dePluralize(getTableName())
+        Inflector.singularize(getTableName())
       );
     }
   }

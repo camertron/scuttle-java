@@ -184,7 +184,7 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
 
   // Triggered for sub-queries like you might have with an IN(), eg. WHERE id IN(SELECT id FROM foo)
   @Override public Void visitQuery_expression(SQLParser.Query_expressionContext ctx) {
-    SqlStatementVisitor ssmtVisitor = new SqlStatementVisitor();
+    SelectFromVisitor ssmtVisitor = new SelectFromVisitor();
     ssmtVisitor.visit(ctx);
     m_stkOperandStack.push(ssmtVisitor.toString() + ".ast");
     return null;

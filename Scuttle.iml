@@ -17,12 +17,7 @@
           <root url="jar://$MODULE_DIR$/../SQLParser/out/artifacts/SQLParser.jar!/" />
         </CLASSES>
         <JAVADOC />
-        <SOURCES>
-          <root url="file://$MODULE_DIR$/../SQLParser/src/main/java" />
-          <root url="file://$MODULE_DIR$/../SQLParser/src/main/java" />
-          <root url="file://$USER_HOME$/workspace/antlr4/runtime/Java/src" />
-          <root url="file://$USER_HOME$/workspace/antlr4/runtime/JavaAnnotations/src" />
-        </SOURCES>
+        <SOURCES />
       </library>
     </orderEntry>
   </component>

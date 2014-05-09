@@ -8,6 +8,7 @@ import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 public class OrderVisitor extends SQLParserBaseVisitor<Void> {
   private TerminalNodeImpl m_tniOrder;
   private ColumnVisitor m_cvColumn;
+  private String m_sExpression;
   private FromVisitor m_fmFromVisitor;
 
   public OrderVisitor(FromVisitor fmFromVisitor) {
@@ -27,6 +28,13 @@ public class OrderVisitor extends SQLParserBaseVisitor<Void> {
     return null;
   }
 
+  @Override public Void visitRoutine_invocation(@NotNull SQLParser.Routine_invocationContext ctx) {
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
+    veVisitor.visit(ctx);
+    m_sExpression = veVisitor.toString();
+    return null;
+  }
+
   public boolean isReverseOrder() {
     if (m_tniOrder == null) {
       return false;
@@ -35,15 +43,12 @@ public class OrderVisitor extends SQLParserBaseVisitor<Void> {
     }
   }
 
+  public boolean hasExpression() { return m_sExpression != null; }
   public String getColumn() {
     return m_cvColumn.toString();
   }
-
+  public String getExpression() { return m_sExpression; }
   public String getQualifiedColumn(String sTableName) {
     return m_cvColumn.toString(sTableName);
-  }
-
-  public String getOrder() {
-    return m_tniOrder.getText().toLowerCase();
   }
 }

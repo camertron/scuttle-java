@@ -20,7 +20,11 @@ public class GroupByVisitor extends SQLParserBaseVisitor<Void> {
     for(ParseTree child : ctx.children) {
       GroupVisitor gVisitor = new GroupVisitor(m_fmFromVisitor);
       gVisitor.visit(child);
-      m_alGroups.add(gVisitor.toString());
+      String sResult = gVisitor.toString();
+
+      if (sResult != null) {
+        m_alGroups.add(sResult);
+      }
     }
 
     return null;

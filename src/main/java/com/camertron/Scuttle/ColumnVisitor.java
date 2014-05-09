@@ -3,8 +3,6 @@ package com.camertron.Scuttle;
 import com.camertron.SQLParser.SQLParser;
 import com.camertron.SQLParser.SQLParserBaseVisitor;
 import org.antlr.v4.runtime.misc.NotNull;
-import org.antlr.v4.runtime.tree.ParseTree;
-import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
 public class ColumnVisitor extends SQLParserBaseVisitor<Void> {
   private String m_sTableName;
@@ -19,7 +17,7 @@ public class ColumnVisitor extends SQLParserBaseVisitor<Void> {
 
   @Override public Void visitQualified_asterisk(@NotNull SQLParser.Qualified_asteriskContext ctx) {
     if (ctx.tb_name != null) {
-      m_sTableName = Inflector.dePluralize(Utils.camelize(ctx.tb_name.getText()));
+      m_sTableName = Utils.camelize(Inflector.singularize(ctx.tb_name.getText()));
     }
 
     m_sColumnName = "Arel.star";
@@ -35,7 +33,7 @@ public class ColumnVisitor extends SQLParserBaseVisitor<Void> {
 
   @Override public Void visitColumn_reference(@NotNull SQLParser.Column_referenceContext ctx) {
     if (ctx.tb_name != null) {
-      m_sTableName = Inflector.dePluralize(Utils.camelize(ctx.tb_name.getText()));
+      m_sTableName = Utils.camelize(Inflector.singularize(ctx.tb_name.getText()));
     }
 
     m_sColumnName = ":" + ctx.name.getText();

@@ -7,25 +7,32 @@ import org.antlr.v4.runtime.misc.NotNull;
 import java.util.ArrayList;
 
 public class SelectVisitor extends SQLParserBaseVisitor<Void> {
-  private ArrayList<String> m_alColumns = new ArrayList<String>();
-  private FromVisitor m_fmFromVisitor;
-
-  public SelectVisitor(FromVisitor fmFromVisitor) {
-    super();
-    m_fmFromVisitor = fmFromVisitor;
-  }
+  private SQLParser.Select_listContext m_slcSelectList;
 
   @Override public Void visitSelect_list(@NotNull SQLParser.Select_listContext ctx) {
-    for (SQLParser.Select_sublistContext sublistItemContext : ctx.select_sublist()) {
-      ColumnVisitor scVisitor = new ColumnVisitor(m_fmFromVisitor);
-      scVisitor.visit(sublistItemContext);
-      m_alColumns.add(scVisitor.toString());
-    }
-
+    m_slcSelectList = ctx;
     return null;
   }
 
-  public String toString() {
-    return Utils.commaize(m_alColumns);
+  public String toString(FromVisitor fmFromVisitor) {
+    ArrayList<String> alColumns = new ArrayList<String>();
+
+    for(ColumnVisitor colVisitor : getColumns(fmFromVisitor)) {
+      alColumns.add(colVisitor.toString());
+    }
+
+    return Utils.commaize(alColumns);
+  }
+
+  private ArrayList<ColumnVisitor> getColumns(FromVisitor fmFromVisitor) {
+    ArrayList<ColumnVisitor> alColumns = new ArrayList<ColumnVisitor>();
+
+    for (SQLParser.Select_sublistContext sublistItemContext : m_slcSelectList.select_sublist()) {
+      ColumnVisitor colVisitor = new ColumnVisitor(fmFromVisitor);
+      colVisitor.visit(sublistItemContext);
+      alColumns.add(colVisitor);
+    }
+
+    return alColumns;
   }
 }

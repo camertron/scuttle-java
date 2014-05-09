@@ -80,6 +80,6 @@ public class JoinVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   public String getTableName() {
-    return Utils.camelize(Inflector.dePluralize(m_sTableName));
+    return Utils.camelize(Inflector.singularize(m_sTableName));
   }
 }
