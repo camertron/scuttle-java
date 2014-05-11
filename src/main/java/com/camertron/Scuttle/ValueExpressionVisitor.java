@@ -32,6 +32,29 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
     m_stkOperandStack = new Stack<String>();
   }
 
+  @Override public Void visitBetween_predicate(@NotNull SQLParser.Between_predicateContext ctx) {
+    SQLParser.Between_predicate_part_2Context bpPartTwo = ctx.between_predicate_part_2();
+
+    if (bpPartTwo != null) {
+      ValueExpressionVisitor vePredicandVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
+      vePredicandVisitor.visit(ctx.predicand);
+
+      ValueExpressionVisitor veBeginVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
+      veBeginVisitor.visit(bpPartTwo.begin);
+
+      ValueExpressionVisitor veEndVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
+      veEndVisitor.visit(bpPartTwo.end);
+
+      String sFinal = "Arel::Nodes::Between.new(" + vePredicandVisitor.toString() + ", ";
+      sFinal += "(" + ExpressionUtils.formatOperand(veBeginVisitor.toString(), true, true) + ")";
+      sFinal += ".and(" + ExpressionUtils.formatOperand(veEndVisitor.toString(), false) + "))";
+
+      m_stkOperandStack.push(sFinal);
+    }
+
+    return null;
+  }
+
   @Override public Void visitSet_function_specification(@NotNull SQLParser.Set_function_specificationContext ctx) {
     FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor);
     funcVisitor.visit(ctx);
@@ -96,10 +119,20 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
     return null;
   }
 
-  // This visitor gets hit for * and / operators, but not + or -
+  // This visitor gets hit for *, /, -, and + operators
   @Override public Void visitNumeric_value_expression(SQLParser.Numeric_value_expressionContext ctx) {
     if (ctx.children.size() == 3) {
       TerminalNodeImpl tniOperator = getTerminalNode(ctx.children.get(1));
+
+      switch (tniOperator.symbol.getType()) {
+        case SQLParser.PLUS:
+        case SQLParser.MINUS:
+        case SQLParser.DIVIDE:
+        case SQLParser.MULTIPLY:
+          // extract is used to indicate a set of ruby parens
+          m_stkOperatorStack.push(new TerminalNodeImpl(new CommonToken(SQLParser.EXTRACT, "(")));
+      }
+
       processLeftRight(ctx.left, ctx.right, tniOperator);
     } else {
       visitChildren(ctx);
@@ -114,7 +147,6 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
     return null;
   }
 
-  // Strangely, this visitor method gets hit for + and - operators, but not for * or / (see visitNumeric_value_expression)
   @Override public Void visitTerm(SQLParser.TermContext ctx) {
     // 1 left + 1 right + 1 operator = 3 children
     if (ctx.children.size() == 3) {
@@ -261,6 +293,11 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
                 stkOperandStack.push(
                   "Arel::Nodes::Group.new(" + stkOperandStack.pop() + ")"
                 );
+
+              // extract is used to indicate a set of ruby parens
+              case SQLParser.EXTRACT:
+                // don't do anything for now... this may change later
+                // stkOperandStack.push("(" + stkOperandStack.pop() + ")");
             }
         }
       }
@@ -304,6 +341,7 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
       case SQLParser.IN:
         return OperatorType.BINARY;
       case SQLParser.LEFT_PAREN:
+      case SQLParser.EXTRACT:  // extract is used to indicate a set of ruby parens
         return OperatorType.UNARY;
       default:
         return null;
