@@ -28,6 +28,13 @@ public class GroupVisitor extends SQLParserBaseVisitor<Void> {
     return null;
   }
 
+  @Override public Void visitNonparenthesized_value_expression_primary(@NotNull SQLParser.Nonparenthesized_value_expression_primaryContext ctx) {
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
+    veVisitor.visit(ctx);
+    m_sExpression = veVisitor.toString();
+    return null;
+  }
+
   public String toString() {
     if (m_cvColumn == null) {
       return m_sExpression;
