@@ -33,7 +33,8 @@ public class Tester {
 //    str = "UPDATE phrases SET foo = 'bar'";
 //    str = "INSERT INTO phrases (key) VALUES('bar')";
 //    str = "SELECT id FROM foo LIMIT COUNT(phrases.id)";
-    str = "SELECT id FROM posts WHERE id BETWEEN posts.id + 1 AND posts.id + 2";
+//    str = "SELECT id FROM posts WHERE id BETWEEN posts.id + 1 AND posts.id + 2";
+    str = "SELECT ip, COUNT(signin_attempts.ip) FROM signin_attempts GROUP BY ip ORDER BY COUNT(signin_attempts.ip) DESC LIMIT 30";
     CharStream in = new ANTLRInputStream(str);
     SQLLexer lexer = new SQLLexer(in);
     CommonTokenStream tokens = new CommonTokenStream(lexer);

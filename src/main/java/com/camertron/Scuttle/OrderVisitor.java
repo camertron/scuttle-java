@@ -35,6 +35,13 @@ public class OrderVisitor extends SQLParserBaseVisitor<Void> {
     return null;
   }
 
+  @Override public Void visitNonparenthesized_value_expression_primary(@NotNull SQLParser.Nonparenthesized_value_expression_primaryContext ctx) {
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
+    veVisitor.visit(ctx);
+    m_sExpression = veVisitor.toString();
+    return null;
+  }
+
   public boolean isReverseOrder() {
     if (m_tniOrder == null) {
       return false;
