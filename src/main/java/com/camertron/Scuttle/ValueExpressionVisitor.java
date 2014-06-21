@@ -16,20 +16,28 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   private FromVisitor m_fmFromVisitor;
+  private boolean m_bQualifyColumns;
   private Stack<TerminalNodeImpl> m_stkOperatorStack;
-  private Stack<String> m_stkOperandStack;
+  private Stack<Operand> m_stkOperandStack;
   private boolean m_bAs = false;
   private String m_sAlias;
 
   public ValueExpressionVisitor(FromVisitor fmFromVisitor) {
     super();
-    m_fmFromVisitor = fmFromVisitor;
-    setup();
+    setup(fmFromVisitor);
+    m_bQualifyColumns = false;
   }
 
-  private void setup() {
+  public ValueExpressionVisitor(FromVisitor fmFromVisitor, boolean bQualifyColumns) {
+    super();
+    setup(fmFromVisitor);
+    m_bQualifyColumns = bQualifyColumns;
+  }
+
+  private void setup(FromVisitor fmFromVisitor) {
+    m_fmFromVisitor = fmFromVisitor;
     m_stkOperatorStack = new Stack<TerminalNodeImpl>();
-    m_stkOperandStack = new Stack<String>();
+    m_stkOperandStack = new Stack<Operand>();
   }
 
   @Override public Void visitBetween_predicate(@NotNull SQLParser.Between_predicateContext ctx) {
@@ -49,7 +57,7 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
       sFinal += "(" + ExpressionUtils.formatOperand(veBeginVisitor.toString(), true, true) + ")";
       sFinal += ".and(" + ExpressionUtils.formatOperand(veEndVisitor.toString(), false) + "))";
 
-      m_stkOperandStack.push(sFinal);
+      m_stkOperandStack.push(StringOperand.fromString(sFinal));
     }
 
     return null;
@@ -58,21 +66,21 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
   @Override public Void visitSet_function_specification(@NotNull SQLParser.Set_function_specificationContext ctx) {
     FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor);
     funcVisitor.visit(ctx);
-    m_stkOperandStack.push(funcVisitor.toString());
+    m_stkOperandStack.push(StringOperand.fromString(funcVisitor.toString()));
     return null;
   }
 
   @Override public Void visitRoutine_invocation(@NotNull SQLParser.Routine_invocationContext ctx) {
     FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor);
     funcVisitor.visit(ctx);
-    m_stkOperandStack.push(funcVisitor.toString());
+    m_stkOperandStack.push(StringOperand.fromString(funcVisitor.toString()));
     return null;
   }
 
   @Override public Void visitAggregate_function(@NotNull SQLParser.Aggregate_functionContext ctx) {
     FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor);
     funcVisitor.visit(ctx);
-    m_stkOperandStack.push(funcVisitor.toString());
+    m_stkOperandStack.push(StringOperand.fromString(funcVisitor.toString()));
     return null;
   }
 
@@ -93,13 +101,13 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitUnsigned_numeric_literal(@NotNull SQLParser.Unsigned_numeric_literalContext ctx) {
-    m_stkOperandStack.push(wrapLiteral(ctx.getText()));
+    m_stkOperandStack.push(StringOperand.fromString(wrapLiteral(ctx.getText())));
     visitChildren(ctx);
     return null;
   }
 
   @Override public Void visitGeneral_literal(@NotNull SQLParser.General_literalContext ctx) {
-    m_stkOperandStack.push(wrapLiteral(ctx.getText()));
+    m_stkOperandStack.push(StringOperand.fromString(wrapLiteral(ctx.getText())));
     visitChildren(ctx);
     return null;
   }
@@ -114,8 +122,7 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
   @Override public Void visitColumn_reference(@NotNull SQLParser.Column_referenceContext ctx) {
     ColumnVisitor cVisitor = new ColumnVisitor(m_fmFromVisitor);
     cVisitor.visit(ctx);
-    String col = cVisitor.toString();
-    m_stkOperandStack.push(col);
+    m_stkOperandStack.push(ColumnOperand.fromColumn(cVisitor));
     return null;
   }
 
@@ -210,7 +217,7 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
       }
     }
 
-    m_stkOperandStack.push(Utils.commaize(alInList));
+    m_stkOperandStack.push(StringOperand.fromString(Utils.commaize(alInList)));
     return null;
   }
 
@@ -218,7 +225,7 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
   @Override public Void visitQuery_expression(SQLParser.Query_expressionContext ctx) {
     SelectFromVisitor ssmtVisitor = new SelectFromVisitor();
     ssmtVisitor.visit(ctx);
-    m_stkOperandStack.push(ssmtVisitor.toString() + ".ast");
+    m_stkOperandStack.push(StringOperand.fromString(ssmtVisitor.toString() + ".ast"));
     return null;
   }
 
@@ -235,7 +242,7 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
   private void processLeftRight(ParseTree ptLeft, ParseTree ptRight, TerminalNodeImpl tniOperator) {
     ValueExpressionVisitor veLeftVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
     veLeftVisitor.visit(ptLeft);
-    m_stkOperandStack.push(veLeftVisitor.toString());
+    m_stkOperandStack.push(veLeftVisitor.evaluate());
 
     if (ptRight != null) {
       // push operator
@@ -246,7 +253,7 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
       // push right operand
       ValueExpressionVisitor veRightVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
       veRightVisitor.visit(ptRight);
-      m_stkOperandStack.push(veRightVisitor.toString());
+      m_stkOperandStack.push(veRightVisitor.evaluate());
     }
   }
 
@@ -259,11 +266,15 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   public String toString() {
-    return evaluate();
+    Operand odResult = evaluate();
+    if (odResult == null)
+      return null;
+    else
+      return odResult.toString();
   }
 
-  private String evaluate() {
-    Stack<String> stkOperandStack = (Stack<String>)m_stkOperandStack.clone();
+  private Operand evaluate() {
+    Stack<Operand> stkOperandStack = (Stack<Operand>)m_stkOperandStack.clone();
     Stack<TerminalNodeImpl> stkOperatorStack = (Stack<TerminalNodeImpl>)m_stkOperatorStack.clone();
 
     if (!stkOperandStack.empty()) {
@@ -274,16 +285,30 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
 
         switch(getOperatorType(tniOperator)) {
           case BINARY:
-            String sSecondOperand = ExpressionUtils.formatOperand(stkOperandStack.pop(), false);
-            String sFirstOperand = ExpressionUtils.formatOperand(stkOperandStack.pop(), true);
+            String sSecondOperand = ExpressionUtils.formatOperand(stkOperandStack.pop().toString(), false);
+            Operand odFirstOperand = stkOperandStack.pop();
 
             if (isMethodOperator(tniOperator)) {
+              if (odFirstOperand.getClass() == ColumnOperand.class) {
+                ((ColumnOperand)odFirstOperand).setQualified(true);
+              }
+
+              String sFirstOperand = ExpressionUtils.formatOperand(
+                odFirstOperand.toString(), true
+              );
+
               stkOperandStack.push(
-                sFirstOperand + "." + getMethodNameForOperator(tniOperator) + "(" + sSecondOperand + ")"
+                StringOperand.fromString(
+                  sFirstOperand + "." + getMethodNameForOperator(tniOperator) + "(" + sSecondOperand + ")"
+                )
               );
             } else {
+              String sFirstOperand = ExpressionUtils.formatOperand(odFirstOperand.toString(), true);
+
               stkOperandStack.push(
-                sFirstOperand + " " + tniOperator.getText() + " " + sSecondOperand
+                StringOperand.fromString(
+                  sFirstOperand + " " + tniOperator.getText() + " " + sSecondOperand
+                )
               );
             }
 
@@ -291,7 +316,9 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
             switch (tniOperator.symbol.getType()) {
               case SQLParser.LEFT_PAREN:
                 stkOperandStack.push(
-                  "Arel::Nodes::Group.new(" + stkOperandStack.pop() + ")"
+                  StringOperand.fromString(
+                    "Arel::Nodes::Group.new(" + stkOperandStack.pop().toString() + ")"
+                  )
                 );
 
               // extract is used to indicate a set of ruby parens
@@ -304,21 +331,32 @@ public class ValueExpressionVisitor extends SQLParserBaseVisitor<Void> {
 
       // If this operand is going to be the left-hand side of an arel method call (eg. .eq())
       // then wrap it in a SqlLiteral via ExpressionUtils.formatOperand().
-      String sOperand;
+      Operand odOperand = stkOperandStack.pop();
+      Operand odFinal;
+
+      if (odOperand.getClass() == ColumnOperand.class) {
+        if (m_bQualifyColumns)
+          ((ColumnOperand)odOperand).setQualified(true);
+      }
+
       if (tniOperator == null) {
-        sOperand = stkOperandStack.pop();
+        odFinal = odOperand;
       } else {
-        sOperand = ExpressionUtils.formatOperand(
-          stkOperandStack.pop(), isMethodOperator(tniOperator)
+        odFinal = StringOperand.fromString(
+          ExpressionUtils.formatOperand(
+            odOperand.toString(), isMethodOperator(tniOperator)
+          )
         );
       }
 
       // The .as() method is not available on everything, most notably Arel::Nodes::Group. Watch out.
       if (m_sAlias != null) {
-        sOperand += ".as(" + Utils.quote(m_sAlias) + ")";
+        odFinal = StringOperand.fromString(
+          odOperand.toString() + ".as(" + Utils.quote(m_sAlias) + ")"
+        );
       }
 
-      return sOperand;
+      return odFinal;
     } else {
       return null;
     }

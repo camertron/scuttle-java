@@ -69,4 +69,10 @@ public class ColumnVisitor extends SQLParserBaseVisitor<Void> {
       }
     }
   }
+
+  public String toQualifiedString() {
+    return toString(
+      Utils.camelize(Inflector.singularize(m_fmFromVisitor.getTableRef()))
+    );
+  }
 }

@@ -96,7 +96,7 @@ public class FunctionVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitValue_expression(@NotNull SQLParser.Value_expressionContext ctx) {
-    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_bIsAggregate);
     veVisitor.visit(ctx);
     addArgument(veVisitor.toString());
     return null;
