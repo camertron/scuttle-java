@@ -1,5 +1,7 @@
 package com.camertron.Scuttle.Resolver;
 
+import com.camertron.Scuttle.Utils;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,14 +25,14 @@ public class AssociationChain {
   }
 
   private String chainToString(int index) {
-    if (index == m_saChain.size() - 1) {
-      return symbolize(m_saChain.get(index));
-    } else {
-      return symbolize(m_saChain.get(index)) + " => { " + chainToString(index + 1) + " }";
-    }
-  }
+    String sFirstSymbol = Utils.symbolize(m_saChain.get(index));
 
-  private String symbolize(String sStr) {
-    return ":" + sStr;
+    if (index == m_saChain.size() - 1) {
+      return sFirstSymbol;
+    } else if (index == m_saChain.size() - 2) {
+      return sFirstSymbol + " => " + chainToString(index + 1);
+    } else {
+      return sFirstSymbol + " => { " + chainToString(index + 1) + " }";
+    }
   }
 }

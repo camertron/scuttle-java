@@ -1,10 +1,11 @@
 package com.camertron.Scuttle;
 
+import com.camertron.SQLParser.SQLLexer;
+import com.camertron.SQLParser.SQLParser;
 import com.camertron.Scuttle.Resolver.*;
-import com.sun.deploy.association.Association;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.antlr.v4.runtime.ANTLRInputStream;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CommonTokenStream;
 
 public class Tester {
   public static void main(String[] args) {
@@ -21,14 +22,14 @@ public class Tester {
     manager.addAssociation("authors", "comments", AssociationType.BELONGS_TO);
     manager.addAssociation("favorites", "posts", AssociationType.BELONGS_TO);
 
-    JoinColumnPairList joins = new JoinColumnPairList();
-    joins.addPair("comments", "comments", "id", "authors", "comment_id");
-    joins.addPair("posts", "posts", "id", "comments", "post_id");
-    joins.addPair("favorites", "favorites", "post_id", "posts", "id");
-
-    AssociationResolver resolver = new AssociationResolver(manager);
-    AssociationChain chain = resolver.getAssociationForJoins(joins);
-    System.out.println(chain.toString());
+//    JoinColumnPairList joins = new JoinColumnPairList();
+//    joins.addPair("comments", "comments", "id", "authors", "comment_id");
+//    joins.addPair("posts", "posts", "id", "comments", "post_id");
+//    joins.addPair("favorites", "favorites", "post_id", "posts", "id");
+//
+//    AssociationResolver resolver = manager.createResolver();
+//    AssociationChain chain = resolver.getAssociationChainForJoins(joins);
+//    System.out.println(chain);
 
     // SELECT "authors".* FROM "authors"
     // INNER JOIN "comments" ON "comments"."id" = "authors"."comment_id"
@@ -56,8 +57,7 @@ public class Tester {
 //      }
 //    }
 
-    return;
-//    String str = "SELECT COALESCE(1, 'a', (oxen.key + 1)) AS `col`, COUNT(*), STRLEN(phrases.key), created_at FROM phrases";
+    String str = "SELECT COALESCE(1, 'a', (oxen.key + 1)) AS `col`, COUNT(*), STRLEN(phrases.key), created_at FROM phrases";
 //    str = "SELECT phrases.key + (phrases.key / 2) AS 'foobar' FROM phrases";
 //    str = "SELECT phrases.* FROM phrases";
 //    str = "SELECT MAX(phrases.created_at) FROM phrases";
@@ -83,13 +83,14 @@ public class Tester {
 //    str = "SELECT id, key FROM phrases";
 //    str = "SELECT * FROM phrases WHERE phrases.id IN (1, 2, 3, 4)";
 //    str = "SELECT * FROM phrases WHERE id = 1";
-//    CharStream in = new ANTLRInputStream(str);
-//    SQLLexer lexer = new SQLLexer(in);
-//    CommonTokenStream tokens = new CommonTokenStream(lexer);
-//    SQLParser parser = new SQLParser(tokens);
-//    SQLParser.SqlContext result = parser.sql();
-//    SqlStatementVisitor ssVisitor = new SqlStatementVisitor();
-//    ssVisitor.visit(result);
-//    System.out.println(ssVisitor.toString());
+    str = "SELECT `authors`.* FROM `authors` JOIN `comments` ON `comments`.`id` = `authors`.`comment_id` INNER JOIN `posts` ON `posts`.`id` = `comments`.`post_id` INNER JOIN `favorites` ON `favorites`.`post_id` = `posts`.`id`";
+    CharStream in = new ANTLRInputStream(str);
+    SQLLexer lexer = new SQLLexer(in);
+    CommonTokenStream tokens = new CommonTokenStream(lexer);
+    SQLParser parser = new SQLParser(tokens);
+    SQLParser.SqlContext result = parser.sql();
+    SqlStatementVisitor ssVisitor = new SqlStatementVisitor(manager.createResolver());
+    ssVisitor.visit(result);
+    System.out.println(ssVisitor.toString());
   }
 }

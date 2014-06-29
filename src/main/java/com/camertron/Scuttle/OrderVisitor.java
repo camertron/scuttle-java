@@ -1,23 +1,21 @@
 package com.camertron.Scuttle;
 
 import com.camertron.SQLParser.SQLParser;
-import com.camertron.SQLParser.SQLParserBaseVisitor;
+import com.camertron.Scuttle.Resolver.AssociationResolver;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
-public class OrderVisitor extends SQLParserBaseVisitor<Void> {
+public class OrderVisitor extends ScuttleBaseVisitor {
   private TerminalNodeImpl m_tniOrder;
   private ColumnVisitor m_cvColumn;
   private String m_sExpression;
-  private FromVisitor m_fmFromVisitor;
 
-  public OrderVisitor(FromVisitor fmFromVisitor) {
-    super();
-    m_fmFromVisitor = fmFromVisitor;
+  public OrderVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver) {
+    super(fmFromVisitor, arResolver);
   }
 
   @Override public Void visitSort_specifier(@NotNull SQLParser.Sort_specifierContext ctx) {
-    m_cvColumn = new ColumnVisitor(m_fmFromVisitor);
+    m_cvColumn = new ColumnVisitor(m_fmFromVisitor, m_arResolver);
     m_cvColumn.visit(ctx);
     visitChildren(ctx);
     return null;
@@ -29,14 +27,14 @@ public class OrderVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitRoutine_invocation(@NotNull SQLParser.Routine_invocationContext ctx) {
-    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver);
     veVisitor.visit(ctx);
     m_sExpression = veVisitor.toString();
     return null;
   }
 
   @Override public Void visitNonparenthesized_value_expression_primary(@NotNull SQLParser.Nonparenthesized_value_expression_primaryContext ctx) {
-    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver);
     veVisitor.visit(ctx);
     m_sExpression = veVisitor.toString();
     return null;

@@ -2,6 +2,7 @@ package com.camertron.Scuttle;
 
 import com.camertron.SQLParser.SQLParser;
 import com.camertron.SQLParser.SQLParserBaseVisitor;
+import com.camertron.Scuttle.Resolver.AssociationResolver;
 import org.antlr.v4.runtime.misc.NotNull;
 
 import java.util.ArrayList;
@@ -10,10 +11,13 @@ public class FromVisitor extends SQLParserBaseVisitor<Void> {
   private String m_sTableName;
   private String m_sSubqueryIdentifier;
   private SelectFromVisitor m_stmtSubquery;
-  private ArrayList<JoinVisitor> m_alJoins = new ArrayList<JoinVisitor>();
+  private ArrayList<JoinVisitor> m_alJoins;
+  private AssociationResolver m_arResolver;
 
-  public FromVisitor() {
+  public FromVisitor(AssociationResolver arResolver) {
     super();
+    m_arResolver = arResolver;
+    m_alJoins = new ArrayList<JoinVisitor>();
   }
 
   public FromVisitor(String sTableName) {
@@ -35,14 +39,14 @@ public class FromVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitJoined_table_primary(@NotNull SQLParser.Joined_table_primaryContext ctx) {
-    JoinVisitor jnVisitor = new JoinVisitor(this);
+    JoinVisitor jnVisitor = new JoinVisitor(this, m_arResolver);
     jnVisitor.visit(ctx);
     m_alJoins.add(jnVisitor);
     return null;
   }
 
   @Override public Void visitTable_subquery(@NotNull SQLParser.Table_subqueryContext ctx) {
-    SelectFromVisitor ssVisitor = new SelectFromVisitor();
+    SelectFromVisitor ssVisitor = new SelectFromVisitor(m_arResolver);
     ssVisitor.visit(ctx);
     m_stmtSubquery = ssVisitor;
     return null;

@@ -1,31 +1,29 @@
 package com.camertron.Scuttle;
 
 import com.camertron.SQLParser.SQLParser;
-import com.camertron.SQLParser.SQLParserBaseVisitor;
+import com.camertron.Scuttle.Resolver.AssociationResolver;
 import org.antlr.v4.runtime.misc.NotNull;
 
-public class ColumnVisitor extends SQLParserBaseVisitor<Void> {
+public class ColumnVisitor extends ScuttleBaseVisitor {
   private String m_sTableName;
   private String m_sColumnName;
   private String m_sExpression;
-  private FromVisitor m_fmFromVisitor;
 
-  public ColumnVisitor(FromVisitor fmFromVisitor) {
-    super();
-    m_fmFromVisitor = fmFromVisitor;
+  public ColumnVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver) {
+    super(fmFromVisitor, arResolver);
   }
 
   @Override public Void visitQualified_asterisk(@NotNull SQLParser.Qualified_asteriskContext ctx) {
     if (ctx.tb_name != null) {
-      m_sTableName = Utils.camelize(Inflector.singularize(ctx.tb_name.getText()));
+      m_sTableName = ctx.tb_name.getText();
     }
 
-    m_sColumnName = "Arel.star";
+    m_sColumnName = "*";
     return null;
   }
 
   @Override public Void visitDerived_column(@NotNull SQLParser.Derived_columnContext ctx) {
-    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver);
     veVisitor.visit(ctx);
     m_sExpression = veVisitor.toString();
     return null;
@@ -33,10 +31,10 @@ public class ColumnVisitor extends SQLParserBaseVisitor<Void> {
 
   @Override public Void visitColumn_reference(@NotNull SQLParser.Column_referenceContext ctx) {
     if (ctx.tb_name != null) {
-      m_sTableName = Utils.camelize(Inflector.singularize(ctx.tb_name.getText()));
+      m_sTableName = ctx.tb_name.getText();
     }
 
-    m_sColumnName = ":" + ctx.name.getText();
+    m_sColumnName = ctx.name.getText();
     visitChildren(ctx);
     return null;
   }
@@ -52,19 +50,19 @@ public class ColumnVisitor extends SQLParserBaseVisitor<Void> {
     if (m_sTableName == null) {
       sTableName = sFromTableName;
     } else {
-      sTableName = m_sTableName;
+      sTableName = getTableName();
     }
 
     if (m_sExpression != null) {
       return m_sExpression;
     } else {
       if (sTableName == null) {
-        return m_sColumnName;
+        return getColumnName();
       } else {
         if (m_fmFromVisitor != null && m_fmFromVisitor.hasSubquery()) {
-          return m_fmFromVisitor.getSubqueryIdentifier() + "[" + m_sColumnName + "]";
+          return m_fmFromVisitor.getSubqueryIdentifier() + "[" + getColumnName() + "]";
         } else {
-          return sTableName + ".arel_table[" + m_sColumnName + "]";
+          return sTableName + ".arel_table[" + getColumnName() + "]";
         }
       }
     }
@@ -74,5 +72,27 @@ public class ColumnVisitor extends SQLParserBaseVisitor<Void> {
     return toString(
       Utils.camelize(Inflector.singularize(m_fmFromVisitor.getTableRef()))
     );
+  }
+
+  public String getRawTableName() {
+    return m_sTableName;
+  }
+
+  public String getRawColumnName() {
+    return m_sColumnName;
+  }
+
+  public String getColumnName() {
+    String sRawColumnName = getRawColumnName();
+
+    if (sRawColumnName == "*") {
+      return "Arel.star";
+    } else {
+      return Utils.symbolize(sRawColumnName);
+    }
+  }
+
+  public String getTableName() {
+    return Utils.camelize(Inflector.singularize(getRawTableName()));
   }
 }

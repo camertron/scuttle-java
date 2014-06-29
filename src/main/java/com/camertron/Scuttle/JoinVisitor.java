@@ -1,26 +1,24 @@
 package com.camertron.Scuttle;
 
 import com.camertron.SQLParser.SQLParser;
-import com.camertron.SQLParser.SQLParserBaseVisitor;
+import com.camertron.Scuttle.Resolver.AssociationResolver;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
 import java.util.ArrayList;
 
-public class JoinVisitor extends SQLParserBaseVisitor<Void> {
+public class JoinVisitor extends ScuttleBaseVisitor {
   private String m_sTableName;
-  private String m_sConditions;
-  private FromVisitor m_fmFromVisitor;
+  private JoinConditionVisitor m_jcConditionVisitor;
 
   private boolean m_bLeft = false;
   private boolean m_bRight = false;
   private boolean m_bInner = false;
   private boolean m_bOuter = false;
 
-  public JoinVisitor(FromVisitor fmFromVisitor) {
-    super();
-    m_fmFromVisitor = fmFromVisitor;
+  public JoinVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver) {
+    super(fmFromVisitor, arResolver);
   }
 
   @Override public Void visitTable_name(@NotNull SQLParser.Table_nameContext ctx) {
@@ -34,9 +32,9 @@ public class JoinVisitor extends SQLParserBaseVisitor<Void> {
       setJoinType(gatherTerminals(ctx.t));
     }
 
-    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor);
+    JoinConditionVisitor veVisitor = new JoinConditionVisitor(m_fmFromVisitor, m_arResolver);
     veVisitor.visit(ctx.s);
-    m_sConditions = veVisitor.toString();
+    m_jcConditionVisitor = veVisitor;
     visit(ctx.right);
     return null;
   }
@@ -76,10 +74,19 @@ public class JoinVisitor extends SQLParserBaseVisitor<Void> {
       sJoin += ", Arel::Nodes::OuterJoin";
     }
 
-    return sJoin + ")" + ".on(" + m_sConditions + ")";
+    return sJoin + ")" + ".on(" + m_jcConditionVisitor.toString() + ")";
   }
 
   public String getTableName() {
     return Utils.camelize(Inflector.singularize(m_sTableName));
+  }
+
+  public boolean isActiveRecordCompatible() {
+    return m_jcConditionVisitor.isActiveRecordCompatible() &&
+      !m_bRight && !m_bOuter && !m_bLeft;
+  }
+
+  public JoinConditionVisitor getConditionVisitor() {
+    return m_jcConditionVisitor;
   }
 }

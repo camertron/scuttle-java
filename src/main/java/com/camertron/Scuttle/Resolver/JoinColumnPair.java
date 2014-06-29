@@ -12,4 +12,8 @@ public class JoinColumnPair extends Pair<ColumnRef> {
   public String toString() {
     return getFirst().toString() + " = " + getSecond().toString();
   }
+
+  public String getJoinTable() {
+    return m_sJoinTable;
+  }
 }

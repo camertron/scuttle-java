@@ -2,6 +2,7 @@ package com.camertron.Scuttle;
 
 import com.camertron.SQLParser.SQLParser;
 import com.camertron.SQLParser.SQLParserBaseVisitor;
+import com.camertron.Scuttle.Resolver.AssociationResolver;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -10,15 +11,13 @@ import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FunctionVisitor extends SQLParserBaseVisitor<Void> {
+public class FunctionVisitor extends ScuttleBaseVisitor {
   private String m_sFunctionName = "";
   private ArrayList<String> m_alArgList = new ArrayList<String>();
   private boolean m_bIsAggregate = false;
-  private FromVisitor m_fmFromVisitor;
 
-  public FunctionVisitor(FromVisitor fmFromVisitor) {
-    super();
-    m_fmFromVisitor = fmFromVisitor;
+  public FunctionVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver) {
+    super(fmFromVisitor, arResolver);
   }
 
   @Override public Void visitAggregate_function(@NotNull SQLParser.Aggregate_functionContext ctx) {
@@ -96,7 +95,7 @@ public class FunctionVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitValue_expression(@NotNull SQLParser.Value_expressionContext ctx) {
-    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_bIsAggregate);
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_bIsAggregate);
     veVisitor.visit(ctx);
     addArgument(veVisitor.toString());
     return null;

@@ -2,30 +2,28 @@ package com.camertron.Scuttle.Resolver;
 
 import com.camertron.Scuttle.Inflector;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
-public class JoinTablePair extends Pair<Vertex<String>> {
+public class JoinTablePair extends Pair<String> {
   protected AssociationType m_atAssocType;
 
-  public JoinTablePair(Vertex<String> first, Vertex<String> second) {
+  public JoinTablePair(String first, String second) {
     m_first = first;
     m_second = second;
   }
 
-  public JoinTablePair(Vertex<String> first, Vertex<String> second, AssociationType atAssocType) {
+  public JoinTablePair(String first, String second, AssociationType atAssocType) {
     m_first = first;
     m_second = second;
     m_atAssocType = atAssocType;
   }
 
   public String getLeftHandTableName() {
-    return getFirst().getValue();
+    return getFirst();
   }
 
   public String getRightHandTableName() {
-    String sRightHandValue = getSecond().getValue();
+    String sRightHandValue = getSecond();
 
     switch (m_atAssocType) {
       case HAS_MANY:
@@ -39,11 +37,11 @@ public class JoinTablePair extends Pair<Vertex<String>> {
     }
   }
 
-  public List<JoinColumnPair> getJoins() {
+  public JoinColumnPairList getJoins() {
     return getJoinsForAssociationType(m_atAssocType);
   }
 
-  private List<JoinColumnPair> getJoinsForAssociationType(AssociationType atAssocType) {
+  private JoinColumnPairList getJoinsForAssociationType(AssociationType atAssocType) {
     switch (atAssocType) {
       case HAS_MANY:
         return getJoinsForHasMany();
@@ -58,39 +56,39 @@ public class JoinTablePair extends Pair<Vertex<String>> {
     }
   }
 
-  private List<JoinColumnPair> getJoinsForHasMany() {
-    List<JoinColumnPair> ljColumns = new ArrayList<JoinColumnPair>();
-    String sFirstCol = deriveColumnIdFromTable(getFirst().getValue());
-    ColumnRef crFirstRef = new ColumnRef(getSecond().getValue(), sFirstCol);
-    ColumnRef crSecondRef = new ColumnRef(getFirst().getValue(), "id");
-    ljColumns.add(new JoinColumnPair(crSecondRef, crFirstRef, getSecond().getValue()));
+  private JoinColumnPairList getJoinsForHasMany() {
+    JoinColumnPairList ljColumns = new JoinColumnPairList();
+    String sFirstCol = deriveColumnIdFromTable(getFirst());
+    ColumnRef crFirstRef = new ColumnRef(getSecond(), sFirstCol);
+    ColumnRef crSecondRef = new ColumnRef(getFirst(), "id");
+    ljColumns.add(new JoinColumnPair(crSecondRef, crFirstRef, getSecond()));
     return ljColumns;
   }
 
-  private List<JoinColumnPair> getJoinsForBelongsTo() {
-    List<JoinColumnPair> ljColumns = new ArrayList<JoinColumnPair>();
-    String sFirstCol = deriveColumnIdFromTable(getSecond().getValue());
-    ColumnRef crFirstRef = new ColumnRef(getFirst().getValue(), sFirstCol);
-    ColumnRef crSecondRef = new ColumnRef(getSecond().getValue(), "id");
-    ljColumns.add(new JoinColumnPair(crFirstRef, crSecondRef, getSecond().getValue()));
+  private JoinColumnPairList getJoinsForBelongsTo() {
+    JoinColumnPairList ljColumns = new JoinColumnPairList();
+    String sFirstCol = deriveColumnIdFromTable(getSecond());
+    ColumnRef crFirstRef = new ColumnRef(getFirst(), sFirstCol);
+    ColumnRef crSecondRef = new ColumnRef(getSecond(), "id");
+    ljColumns.add(new JoinColumnPair(crFirstRef, crSecondRef, getSecond()));
     return ljColumns;
   }
 
-  private List<JoinColumnPair> getJoinsForHasOne() {
+  private JoinColumnPairList getJoinsForHasOne() {
     return getJoinsForHasMany();
   }
 
-  private List<JoinColumnPair> getJoinsForHasAndBelongsToMany() {
-    List<JoinColumnPair> ljColumns = new ArrayList<JoinColumnPair>();
+  private JoinColumnPairList getJoinsForHasAndBelongsToMany() {
+    JoinColumnPairList ljColumns = new JoinColumnPairList();
     String sJoinTableName = deriveJoinTableName();
 
-    ColumnRef crFirstRef = new ColumnRef(getFirst().getValue(), "id");
-    ColumnRef crSecondRef = new ColumnRef(sJoinTableName, deriveColumnIdFromTable(getFirst().getValue()));
-    ljColumns.add(new JoinColumnPair(crFirstRef, crSecondRef, getSecond().getValue()));
+    ColumnRef crFirstRef = new ColumnRef(getFirst(), "id");
+    ColumnRef crSecondRef = new ColumnRef(sJoinTableName, deriveColumnIdFromTable(getFirst()));
+    ljColumns.add(new JoinColumnPair(crFirstRef, crSecondRef, getSecond()));
 
-    crFirstRef = new ColumnRef(sJoinTableName, deriveColumnIdFromTable(getSecond().getValue()));
-    crSecondRef = new ColumnRef(getSecond().getValue(), "id");
-    ljColumns.add(new JoinColumnPair(crFirstRef, crSecondRef, getSecond().getValue()));
+    crFirstRef = new ColumnRef(sJoinTableName, deriveColumnIdFromTable(getSecond()));
+    crSecondRef = new ColumnRef(getSecond(), "id");
+    ljColumns.add(new JoinColumnPair(crFirstRef, crSecondRef, getSecond()));
 
     return ljColumns;
   }
@@ -100,7 +98,7 @@ public class JoinTablePair extends Pair<Vertex<String>> {
   }
 
   private String deriveJoinTableName() {
-    String[] saTableParts = new String[] { getFirst().getValue(), getSecond().getValue() };
+    String[] saTableParts = new String[] { getFirst(), getSecond() };
     Arrays.sort(saTableParts);
     return saTableParts[0] + "_" + saTableParts[1];
   }

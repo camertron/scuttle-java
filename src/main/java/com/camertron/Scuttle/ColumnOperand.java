@@ -26,4 +26,20 @@ public class ColumnOperand implements Operand {
   public boolean getQualified() {
     return m_bQualified;
   }
+
+  public String getRawTableName() {
+    return m_cvColumn.getRawTableName();
+  }
+
+  public String getRawColumnName() {
+    return m_cvColumn.getRawColumnName();
+  }
+
+  public String getTableName() {
+    return m_cvColumn.getTableName();
+  }
+
+  public String getColumnName() {
+    return m_cvColumn.getColumnName();
+  }
 }

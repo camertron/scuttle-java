@@ -2,12 +2,14 @@ package com.camertron.Scuttle;
 
 import com.camertron.SQLParser.SQLParser;
 import com.camertron.SQLParser.SQLParserBaseVisitor;
+import com.camertron.Scuttle.Resolver.AssociationResolver;
 import org.antlr.v4.runtime.misc.NotNull;
 
 import java.util.ArrayList;
 
 public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
   private FromVisitor m_fmFromVisitor;
+  private AssociationResolver m_arResolver;
   private ArrayList<JoinVisitor> m_alJoins = new ArrayList<JoinVisitor>();
   private SelectVisitor m_svSelectVisitor;
   private String m_sWhereClause = "";
@@ -16,8 +18,12 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
   private String m_sLimitClause = "";
   private boolean m_bDistinct = false;
 
+  public SelectFromVisitor(AssociationResolver arResolver) {
+    m_arResolver = arResolver;
+  }
+
   @Override public Void visitSelect_list(@NotNull SQLParser.Select_listContext ctx) {
-    SelectVisitor selVisitor = new SelectVisitor();
+    SelectVisitor selVisitor = new SelectVisitor(m_fmFromVisitor, m_arResolver);
     selVisitor.visit(ctx);
     m_svSelectVisitor = selVisitor;
     return null;
@@ -33,7 +39,7 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitFrom_clause(@NotNull SQLParser.From_clauseContext ctx) {
-    FromVisitor fmVisitor = new FromVisitor();
+    FromVisitor fmVisitor = new FromVisitor(m_arResolver);
     fmVisitor.visit(ctx);
     m_fmFromVisitor = fmVisitor;
     m_alJoins.addAll(fmVisitor.getJoins());
@@ -41,28 +47,28 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitWhere_clause(@NotNull SQLParser.Where_clauseContext ctx) {
-    WhereVisitor whVisitor = new WhereVisitor(m_fmFromVisitor);
+    WhereVisitor whVisitor = new WhereVisitor(m_fmFromVisitor, m_arResolver);
     whVisitor.visit(ctx);
     m_sWhereClause = whVisitor.toString();
     return null;
   }
 
   @Override public Void visitOrderby_clause(@NotNull SQLParser.Orderby_clauseContext ctx) {
-    OrderByVisitor obVisitor = new OrderByVisitor(m_fmFromVisitor);
+    OrderByVisitor obVisitor = new OrderByVisitor(m_fmFromVisitor, m_arResolver);
     obVisitor.visit(ctx);
     m_obOrderByVisitor = obVisitor;
     return null;
   }
 
   @Override public Void visitGroupby_clause(@NotNull SQLParser.Groupby_clauseContext ctx) {
-    GroupByVisitor gbVisitor = new GroupByVisitor(m_fmFromVisitor);
+    GroupByVisitor gbVisitor = new GroupByVisitor(m_fmFromVisitor, m_arResolver);
     gbVisitor.visit(ctx);
     m_sGroupByClause = gbVisitor.toString();
     return null;
   }
 
   @Override public Void visitLimit_clause(@NotNull SQLParser.Limit_clauseContext ctx) {
-    LimitVisitor lmVisitor = new LimitVisitor(m_fmFromVisitor);
+    LimitVisitor lmVisitor = new LimitVisitor(m_fmFromVisitor, m_arResolver);
     lmVisitor.visit(ctx);
     m_sLimitClause = lmVisitor.toString();
     return null;
@@ -81,12 +87,7 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
       sQuery += ".where(" + m_sWhereClause + ")";
     }
 
-    if (!m_alJoins.isEmpty()) {
-      for(JoinVisitor join : m_alJoins) {
-        sQuery += ".joins(" + join.toString() + ".join_sources)";
-      }
-    }
-
+    sQuery += composeJoins();
     sQuery += composeOrderBy();
 
     if (!m_sGroupByClause.equals("")) {
@@ -154,4 +155,21 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
       return sQuery;
     }
   }
+
+  private String composeJoins() {
+    JoinManager jmJoinManager = new JoinManager(m_alJoins, m_arResolver);
+    return jmJoinManager.toString();
+  }
+
+//  private String composeJoins() {
+//    StringBuilder sbJoins = new StringBuilder();
+//
+//    if (!m_alJoins.isEmpty()) {
+//      for(JoinVisitor join : m_alJoins) {
+//        sbJoins.append(".joins(" + join.toString() + ".join_sources)");
+//      }
+//    }
+//
+//    return sbJoins.toString();
+//  }
 }

@@ -40,4 +40,12 @@ public class Utils {
     String cleanStr = p.matcher(str.trim()).replaceAll("");
     return "'" + cleanStr.replaceAll("'", "\\'") + "'";
   }
+
+  public static String symbolize(String sStr) {
+    if (sStr.contains("-") || sStr.contains("'") || sStr.contains("\"")) {
+      return ":" + quote(sStr);
+    } else {
+      return ":" + sStr;
+    }
+  }
 }

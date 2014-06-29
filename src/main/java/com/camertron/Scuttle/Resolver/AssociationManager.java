@@ -15,9 +15,13 @@ public class AssociationManager {
     m_gphAssociations.addEdge(sFirstModel, sSecondModel, atType);
   }
 
+  public AssociationResolver createResolver() {
+    return new AssociationResolver(this);
+  }
+
   // @TODO: remove this method
   public void printAssociationJoins() {
-    HashMap<AssociationPair, List<JoinTablePair>> joins = getAssociationJoins();
+    HashMap<AssociationPair, JoinTablePairList> joins = getAssociationJoins();
     Iterator iter = joins.entrySet().iterator();
 
     while (iter.hasNext()) {
@@ -27,15 +31,15 @@ public class AssociationManager {
       StringBuilder msg = new StringBuilder(p.getFirst() + " and " + p.getSecond() + ": ");
 
       for (JoinTablePair join : j) {
-        msg.append(join.getFirst().getValue() + " " + join.m_atAssocType.toString() + " " + join.getSecond().getValue() + ", ");
+        msg.append(join.getFirst() + " " + join.m_atAssocType.toString() + " " + join.getSecond() + ", ");
       }
 
       System.out.println(msg.toString());
     }
   }
 
-  public HashMap<AssociationPair, List<JoinTablePair>> getAssociationJoins() {
-    HashMap<AssociationPair, List<JoinTablePair>> hmResult = new HashMap<AssociationPair, List<JoinTablePair>>();
+  public HashMap<AssociationPair, JoinTablePairList> getAssociationJoins() {
+    HashMap<AssociationPair, JoinTablePairList> hmResult = new HashMap<AssociationPair, JoinTablePairList>();
     Set<AssociationPair> spPairs = getVertexPairs();
     Iterator iter = spPairs.iterator();
 
@@ -47,9 +51,9 @@ public class AssociationManager {
     return hmResult;
   }
 
-  private List<JoinTablePair> getAssociationJoinsForPair(AssociationPair pair) {
+  private JoinTablePairList getAssociationJoinsForPair(AssociationPair pair) {
     ArrayList<Vertex<String>> path = m_gphAssociations.getShortestPath(pair.getFirst(), pair.getSecond());
-    ArrayList<JoinTablePair> alResult = new ArrayList<JoinTablePair>();
+    JoinTablePairList alResult = new JoinTablePairList();
 
     for (int i = 1; i < path.size(); i ++) {
       Vertex<String> vsFirst = path.get(i - 1);
@@ -60,7 +64,7 @@ public class AssociationManager {
         .getNeighbors().get(vsSecond.getValue())
         .getMetadata();
 
-      alResult.add(new JoinTablePair(vsFirst, vsSecond, atAssocType));
+      alResult.add(new JoinTablePair(vsFirst.getValue(), vsSecond.getValue(), atAssocType));
     }
 
     return alResult;

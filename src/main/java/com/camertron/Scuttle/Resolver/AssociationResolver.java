@@ -4,22 +4,22 @@ import java.util.*;
 
 public class AssociationResolver {
   private AssociationManager m_arManager;
-  private HashMap<AssociationPair, List<JoinTablePair>> m_hmJoinsPerPair;
+  private HashMap<AssociationPair, JoinTablePairList> m_hmJoinsPerPair;
 
   public AssociationResolver(AssociationManager arManager) {
     m_arManager = arManager;
     m_hmJoinsPerPair = arManager.getAssociationJoins();
   }
 
-  public AssociationChain getAssociationForJoins(JoinColumnPairList theirJoins) {
+  public AssociationChain getAssociationChainForJoins(JoinColumnPairList theirJoins) {
     Iterator iter = m_hmJoinsPerPair.entrySet().iterator();
 
     while (iter.hasNext()) {
       Map.Entry entry = (Map.Entry)iter.next();
-      AssociationPair pair = (AssociationPair)entry.getKey();
-      List<JoinTablePair> ourJoins = (List<JoinTablePair>)entry.getValue();
+      JoinTablePairList ourJoinTables = (JoinTablePairList)entry.getValue();
+      JoinColumnPairList ourJoins = ourJoinTables.getAllJoins();
 
-      if (joinTableListsMatch(theirJoins, ourJoins)) {
+      if (joinColumnListsMatch(theirJoins, ourJoins)) {
         AssociationChain chain = new AssociationChain();
 
         for (JoinTablePair ourJoinTable : ourJoinTables) {
@@ -33,48 +33,17 @@ public class AssociationResolver {
     return null;
   }
 
-  private List<JoinColumnPair> getAllJoins(List<JoinTablePair> joinTables) {
-    List<JoinColumnPair> joinColumns = new ArrayList<JoinColumnPair>();
-
-    for (JoinTablePair joinTable : joinTables) {
-      joinColumns.addAll(joinTable.getJoins());
-    }
-
-    return joinColumns;
-  }
-
-  private boolean joinTableListsMatch(List<JoinTablePair> theirTables, List<JoinTablePair> ourTables) {
-    boolean bFound;
-
-    for (JoinTablePair theirTable : theirTables) {
-      bFound = false;
-
-      for (JoinTablePair ourTable : ourTables) {
-        if (joinColumnListsMatch(theirTable.getJoins(), ourTable.getJoins())) {
-          bFound = true;
-          break;
-        }
-      }
-
-      if (!bFound) {
-        return false
-      }
-    }
-
-    return true;
-  }
-
-  private boolean joinColumnListsMatch(List<JoinColumnPair> theirColumns, List<JoinColumnPair> ourColumns) {
+  private boolean joinColumnListsMatch(JoinColumnPairList theirColumns, JoinColumnPairList ourColumns) {
     boolean bFound;
 
     for (JoinColumnPair theirColumn : theirColumns) {
       bFound = false;
 
       for (JoinColumnPair ourColumn : ourColumns) {
-        if (columnRefsMatch(theirColumn.getFirst(), ourColumn.getFirst()) && columnRefsMatch(theirColumn.getSecond(), ourColumn.getSecond())) {
-          bFound = true;
-          break;
-        }
+        bFound = bFound || (columnRefsMatch(theirColumn.getFirst(), ourColumn.getFirst()) && columnRefsMatch(theirColumn.getSecond(), ourColumn.getSecond()));
+        bFound = bFound || (columnRefsMatch(theirColumn.getSecond(), ourColumn.getFirst()) && columnRefsMatch(theirColumn.getFirst(), ourColumn.getSecond()));
+        bFound = bFound && ourColumn.getJoinTable().equals(theirColumn.getJoinTable());
+        if (bFound) { break; }
       }
 
       if (!bFound) {
