@@ -18,8 +18,8 @@ public class Tester {
     manager.addAssociation("posts", "comments", AssociationType.HAS_MANY);
     manager.addAssociation("posts", "favorites", AssociationType.HAS_MANY);
     manager.addAssociation("comments", "posts", AssociationType.BELONGS_TO);
-    manager.addAssociation("comments", "authors", AssociationType.HAS_ONE);
-    manager.addAssociation("authors", "comments", AssociationType.BELONGS_TO);
+    manager.addAssociation("comments", "authors", AssociationType.BELONGS_TO);
+    manager.addAssociation("authors", "comments", AssociationType.HAS_ONE);
     manager.addAssociation("favorites", "posts", AssociationType.BELONGS_TO);
 
 //    JoinColumnPairList joins = new JoinColumnPairList();
@@ -83,7 +83,8 @@ public class Tester {
 //    str = "SELECT id, key FROM phrases";
 //    str = "SELECT * FROM phrases WHERE phrases.id IN (1, 2, 3, 4)";
 //    str = "SELECT * FROM phrases WHERE id = 1";
-    str = "SELECT `authors`.* FROM `authors` JOIN `comments` ON `comments`.`id` = `authors`.`comment_id` INNER JOIN `posts` ON `posts`.`id` = `comments`.`post_id` INNER JOIN `favorites` ON `favorites`.`post_id` = `posts`.`id`";
+    str = "SELECT `authors`.* FROM `authors` JOIN `comments` ON `comments`.`author_id` = `authors`.`id` INNER JOIN `posts` ON `posts`.`id` = `comments`.`post_id` INNER JOIN `favorites` ON `favorites`.`post_id` = `posts`.`id`";
+//    str = "SELECT `posts`.* from `posts` INNER JOIN `comments` ON `comments`.`post_id` = `posts`.`id`";
     CharStream in = new ANTLRInputStream(str);
     SQLLexer lexer = new SQLLexer(in);
     CommonTokenStream tokens = new CommonTokenStream(lexer);

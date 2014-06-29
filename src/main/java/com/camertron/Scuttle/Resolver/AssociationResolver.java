@@ -34,6 +34,10 @@ public class AssociationResolver {
   }
 
   private boolean joinColumnListsMatch(JoinColumnPairList theirColumns, JoinColumnPairList ourColumns) {
+    if (theirColumns.size() != ourColumns.size()) {
+      return false;
+    }
+
     boolean bFound;
 
     for (JoinColumnPair theirColumn : theirColumns) {
