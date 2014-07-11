@@ -3,11 +3,9 @@ package com.camertron.Scuttle.Resolver;
 import java.util.*;
 
 public class AssociationResolver {
-  private AssociationManager m_arManager;
   private HashMap<AssociationPair, JoinTablePairList> m_hmJoinsPerPair;
 
   public AssociationResolver(AssociationManager arManager) {
-    m_arManager = arManager;
     m_hmJoinsPerPair = arManager.getAssociationJoins();
   }
 
@@ -61,24 +59,5 @@ public class AssociationResolver {
   private boolean columnRefsMatch(ColumnRef theirColumn, ColumnRef ourColumn) {
     return theirColumn.getTableName().equals(ourColumn.getTableName()) &&
       theirColumn.getColumnName().equals(ourColumn.getColumnName());
-  }
-
-  public List<JoinColumnPair> getJoinsForAssociation(String sFirstModel, String sSecondModel) {
-    Iterator iter = m_hmJoinsPerPair.entrySet().iterator();
-    List<JoinColumnPair> ljResult = new ArrayList<JoinColumnPair>();
-
-    while (iter.hasNext()) {
-      Map.Entry entry = (Map.Entry)iter.next();
-      Pair<String> pair = (Pair<String>)entry.getKey();
-      List<JoinTablePair> joinTables = (List<JoinTablePair>)entry.getValue();
-
-      if (pair.getFirst() == sFirstModel && pair.getSecond() == sSecondModel) {
-        for (JoinTablePair joinTable : joinTables) {
-          ljResult.addAll(joinTable.getJoins());
-        }
-      }
-    }
-
-    return ljResult;
   }
 }

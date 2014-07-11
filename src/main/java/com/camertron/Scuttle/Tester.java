@@ -15,12 +15,14 @@ public class Tester {
   private static void parserTest() {
     AssociationManager manager = new AssociationManager();
 
-    manager.addAssociation("posts", "comments", AssociationType.HAS_MANY);
-    manager.addAssociation("posts", "favorites", AssociationType.HAS_MANY);
-    manager.addAssociation("comments", "posts", AssociationType.BELONGS_TO);
-    manager.addAssociation("comments", "authors", AssociationType.BELONGS_TO);
-    manager.addAssociation("authors", "comments", AssociationType.HAS_ONE);
-    manager.addAssociation("favorites", "posts", AssociationType.BELONGS_TO);
+    manager.addAssociation("posts", "comments", AssociationType.HAS_MANY, null, "my_post_id");
+//    manager.addAssociation("posts", "favorites", AssociationType.HAS_MANY, "foobar");
+    manager.addAssociation("comments", "posts", AssociationType.BELONGS_TO, null, "my_post_id");
+//    manager.addAssociation("comments", "authors", AssociationType.BELONGS_TO);
+//    manager.addAssociation("authors", "comments", AssociationType.HAS_ONE);
+//    manager.addAssociation("favorites", "posts", AssociationType.BELONGS_TO);
+//    manager.addAssociation("collab_posts", "authors", AssociationType.HAS_AND_BELONGS_TO_MANY);
+//    manager.addAssociation("authors", "collab_posts", AssociationType.HAS_AND_BELONGS_TO_MANY);
 
 //    JoinColumnPairList joins = new JoinColumnPairList();
 //    joins.addPair("comments", "comments", "id", "authors", "comment_id");
@@ -83,8 +85,13 @@ public class Tester {
 //    str = "SELECT id, key FROM phrases";
 //    str = "SELECT * FROM phrases WHERE phrases.id IN (1, 2, 3, 4)";
 //    str = "SELECT * FROM phrases WHERE id = 1";
-    str = "SELECT `authors`.* FROM `authors` JOIN `comments` ON `comments`.`author_id` = `authors`.`id` INNER JOIN `posts` ON `posts`.`id` = `comments`.`post_id` INNER JOIN `favorites` ON `favorites`.`post_id` = `posts`.`id`";
+//    str = "SELECT `authors`.* FROM `authors` JOIN `comments` ON `comments`.`author_id` = `authors`.`id` INNER JOIN `posts` ON `posts`.`id` = `comments`.`post_id` INNER JOIN `favorites` ON `favorites`.`post_id` = `posts`.`id`";
 //    str = "SELECT `posts`.* from `posts` INNER JOIN `comments` ON `comments`.`post_id` = `posts`.`id`";
+//    str = "SELECT `authors`.* FROM `authors` INNER JOIN `authors_collab_posts` ON `authors_collab_posts`.`author_id` = `authors`.`id` INNER JOIN `collab_posts` ON `collab_posts`.`id` = `authors_collab_posts`.`collab_post_id`";
+//    str = "SELECT collab_posts.* FROM collab_posts INNER JOIN authors_collab_posts ON authors_collab_posts.collab_post_id = collab_posts.id INNER JOIN authors ON authors.id = authors_collab_posts.author_id";
+//    str = "SELECT `authors`.* FROM `authors` INNER JOIN `comments` ON `comments`.`author_id` = `authors`.`id` INNER JOIN `posts` ON `posts`.`id` = `comments`.`my_post_id` INNER JOIN `favorites` ON `favorites`.`post_id` = `posts`.`id`";
+//    str = "SELECT * FROM posts INNER JOIN comments ON posts.id = comments.my_post_id";
+    str = "SELECT * FROM comments INNER JOIN posts ON comments.my_post_id = posts.id";
     CharStream in = new ANTLRInputStream(str);
     SQLLexer lexer = new SQLLexer(in);
     CommonTokenStream tokens = new CommonTokenStream(lexer);

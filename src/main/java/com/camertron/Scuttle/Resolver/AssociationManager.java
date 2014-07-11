@@ -12,7 +12,25 @@ public class AssociationManager {
   public void addAssociation(String sFirstModel, String sSecondModel, AssociationType atType) {
     m_gphAssociations.addVertex(sFirstModel);
     m_gphAssociations.addVertex(sSecondModel);
-    m_gphAssociations.addEdge(sFirstModel, sSecondModel, atType);
+    m_gphAssociations.addEdge(
+      sFirstModel, sSecondModel, new AssociationMetadata(atType, null, null)
+    );
+  }
+
+  public void addAssociation(String sFirstModel, String sSecondModel, AssociationType atType, String sAssocName) {
+    m_gphAssociations.addVertex(sFirstModel);
+    m_gphAssociations.addVertex(sSecondModel);
+    m_gphAssociations.addEdge(
+      sFirstModel, sSecondModel, new AssociationMetadata(atType, sAssocName, null)
+    );
+  }
+
+  public void addAssociation(String sFirstModel, String sSecondModel, AssociationType atType, String sAssocName, String sForeignKey) {
+    m_gphAssociations.addVertex(sFirstModel);
+    m_gphAssociations.addVertex(sSecondModel);
+    m_gphAssociations.addEdge(
+      sFirstModel, sSecondModel, new AssociationMetadata(atType, sAssocName, sForeignKey)
+    );
   }
 
   public AssociationResolver createResolver() {
@@ -31,7 +49,7 @@ public class AssociationManager {
       StringBuilder msg = new StringBuilder(p.getFirst() + " and " + p.getSecond() + ": ");
 
       for (JoinTablePair join : j) {
-        msg.append(join.getFirst() + " " + join.m_atAssocType.toString() + " " + join.getSecond() + ", ");
+        msg.append(join.getFirst() + " " + join.m_amAssocMetadata.getType().toString() + " " + join.getSecond() + ", ");
       }
 
       System.out.println(msg.toString());
@@ -45,7 +63,11 @@ public class AssociationManager {
 
     while (iter.hasNext()) {
       AssociationPair pair = (AssociationPair)iter.next();
-      hmResult.put(pair, getAssociationJoinsForPair(pair));
+      JoinTablePairList joins = getAssociationJoinsForPair(pair);
+
+      if (joins != null) {
+        hmResult.put(pair, getAssociationJoinsForPair(pair));
+      }
     }
 
     return hmResult;
@@ -53,18 +75,23 @@ public class AssociationManager {
 
   private JoinTablePairList getAssociationJoinsForPair(AssociationPair pair) {
     ArrayList<Vertex<String>> path = m_gphAssociations.getShortestPath(pair.getFirst(), pair.getSecond());
+
+    if (path == null) {
+      return null;
+    }
+
     JoinTablePairList alResult = new JoinTablePairList();
 
     for (int i = 1; i < path.size(); i ++) {
       Vertex<String> vsFirst = path.get(i - 1);
       Vertex<String> vsSecond = path.get(i);
 
-      AssociationType atAssocType = (AssociationType)m_gphAssociations
+      AssociationMetadata amAssocMetaData = (AssociationMetadata)m_gphAssociations
         .getVertices().get(vsFirst.getValue())
         .getNeighbors().get(vsSecond.getValue())
         .getMetadata();
 
-      alResult.add(new JoinTablePair(vsFirst.getValue(), vsSecond.getValue(), atAssocType));
+      alResult.add(new JoinTablePair(vsFirst.getValue(), vsSecond.getValue(), amAssocMetaData));
     }
 
     return alResult;
