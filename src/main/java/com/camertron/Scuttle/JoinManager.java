@@ -2,6 +2,7 @@ package com.camertron.Scuttle;
 
 import com.camertron.Scuttle.Resolver.AssociationChain;
 import com.camertron.Scuttle.Resolver.AssociationResolver;
+import com.camertron.Scuttle.Resolver.JoinColumnPair;
 import com.camertron.Scuttle.Resolver.JoinColumnPairList;
 
 import java.util.ArrayList;

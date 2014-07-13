@@ -10,27 +10,27 @@ public class AssociationManager {
   }
 
   public void addAssociation(String sFirstModel, String sSecondModel, AssociationType atType) {
-    m_gphAssociations.addVertex(sFirstModel);
-    m_gphAssociations.addVertex(sSecondModel);
-    m_gphAssociations.addEdge(
-      sFirstModel, sSecondModel, new AssociationMetadata(atType, null, null)
-    );
+    addVertices(sFirstModel, sSecondModel);
+    addEdge(sFirstModel, sSecondModel, new AssociationMetadata(atType, null, null));
   }
 
   public void addAssociation(String sFirstModel, String sSecondModel, AssociationType atType, String sAssocName) {
-    m_gphAssociations.addVertex(sFirstModel);
-    m_gphAssociations.addVertex(sSecondModel);
-    m_gphAssociations.addEdge(
-      sFirstModel, sSecondModel, new AssociationMetadata(atType, sAssocName, null)
-    );
+    addVertices(sFirstModel, sSecondModel);
+    addEdge(sFirstModel, sSecondModel, new AssociationMetadata(atType, sAssocName, null));
   }
 
   public void addAssociation(String sFirstModel, String sSecondModel, AssociationType atType, String sAssocName, String sForeignKey) {
-    m_gphAssociations.addVertex(sFirstModel);
-    m_gphAssociations.addVertex(sSecondModel);
-    m_gphAssociations.addEdge(
-      sFirstModel, sSecondModel, new AssociationMetadata(atType, sAssocName, sForeignKey)
-    );
+    addVertices(sFirstModel, sSecondModel);
+    addEdge(sFirstModel, sSecondModel, new AssociationMetadata(atType, sAssocName, sForeignKey));
+  }
+
+  private void addVertices(String sFirst, String sSecond) {
+    m_gphAssociations.addVertex(sFirst);
+    m_gphAssociations.addVertex(sSecond);
+  }
+
+  private void addEdge(String sFirst, String sSecond, AssociationMetadata metadata) {
+    m_gphAssociations.addEdge(sFirst, sSecond, metadata);
   }
 
   public AssociationResolver createResolver() {
