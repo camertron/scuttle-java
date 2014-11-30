@@ -436,7 +436,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       case SQLParser.IN:
         return "in";
       case SQLParser.NOT:
-        return "not_eq";
+        return "not_eq";  // used to indicate IS NOT NULL
       default:
         return null;
     }
