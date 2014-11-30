@@ -98,6 +98,18 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
     return null;
   }
 
+  @Override public Void visitNull_predicate(@NotNull SQLParser.Null_predicateContext ctx) {
+    if (ctx.n == null)
+      m_stkOperatorStack.push((TerminalNodeImpl)ctx.NULL());
+    else
+      m_stkOperatorStack.push((TerminalNodeImpl)ctx.NOT());
+
+    visitChildren(ctx);
+    m_stkOperandStack.push(StringOperand.fromString("nil"));
+
+    return null;
+  }
+
   @Override public Void visitUnsigned_numeric_literal(@NotNull SQLParser.Unsigned_numeric_literalContext ctx) {
     m_stkOperandStack.push(StringOperand.fromString(wrapLiteral(ctx.getText())));
     visitChildren(ctx);
@@ -283,7 +295,8 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
 
         switch(getOperatorType(tniOperator)) {
           case BINARY:
-            String sSecondOperand = ExpressionUtils.formatOperand(stkOperandStack.pop().toString(), false);
+            Operand odSecondOperand = stkOperandStack.pop();
+            String sSecondOperand = ExpressionUtils.formatOperand(odSecondOperand.toString(), false);
             Operand odFirstOperand = stkOperandStack.pop();
 
             if (isMethodOperator(tniOperator)) {
@@ -375,6 +388,8 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       case SQLParser.AND:
       case SQLParser.OR:
       case SQLParser.IN:
+      case SQLParser.NOT:
+      case SQLParser.NULL:
         return OperatorType.BINARY;
       case SQLParser.LEFT_PAREN:
       case SQLParser.EXTRACT:  // extract is used to indicate a set of ruby parens
@@ -406,6 +421,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       case SQLParser.OR:
         return "or";
       case SQLParser.EQUAL:
+      case SQLParser.NULL:
         return "eq";
       case SQLParser.NOT_EQUAL:
         return "neq";
@@ -419,6 +435,8 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
         return "lteq";
       case SQLParser.IN:
         return "in";
+      case SQLParser.NOT:
+        return "not_eq";
       default:
         return null;
     }

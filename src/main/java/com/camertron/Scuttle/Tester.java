@@ -94,7 +94,7 @@ public class Tester {
 //    str = "SELECT `authors`.* FROM `authors` INNER JOIN `comments` ON `comments`.`author_id` = `authors`.`id` INNER JOIN `posts` ON `posts`.`id` = `comments`.`my_post_id` INNER JOIN `favorites` ON `favorites`.`post_id` = `posts`.`id`";
 //    str = "SELECT * FROM posts INNER JOIN comments ON posts.id = comments.my_post_id";
 //    str = "SELECT * FROM comments INNER JOIN posts ON comments.my_post_id = posts.id";
-    str = "SELECT badges.* FROM badges INNER JOIN user_badges ON badges.id = user_badges.badge_id";
+    str = "SELECT * FROM provider_bill_items WHERE cpt_code IS NULL";
     CharStream in = new ANTLRInputStream(str);
     SQLLexer lexer = new SQLLexer(in);
     CommonTokenStream tokens = new CommonTokenStream(lexer);
