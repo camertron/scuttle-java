@@ -424,7 +424,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       case SQLParser.NULL:
         return "eq";
       case SQLParser.NOT_EQUAL:
-        return "neq";
+        return "not_eq";
       case SQLParser.GTH:
         return "gt";
       case SQLParser.LTH:
