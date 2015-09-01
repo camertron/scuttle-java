@@ -227,7 +227,10 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       }
     }
 
-    m_stkOperandStack.push(StringOperand.fromString(Utils.commaize(alInList)));
+    m_stkOperandStack.push(
+      StringOperand.fromString(Utils.singletonArrayFormat(alInList))
+    );
+
     return null;
   }
 

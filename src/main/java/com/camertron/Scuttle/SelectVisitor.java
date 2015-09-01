@@ -25,7 +25,7 @@ public class SelectVisitor extends ScuttleBaseVisitor {
       alColumns.add(colVisitor.toString());
     }
 
-    return Utils.commaize(alColumns);
+    return Utils.singletonArrayFormat(alColumns);
   }
 
   private ArrayList<ColumnVisitor> getColumns(FromVisitor fmFromVisitor) {
