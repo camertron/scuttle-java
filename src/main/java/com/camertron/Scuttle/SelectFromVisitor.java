@@ -16,6 +16,7 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
   private OrderByVisitor m_obOrderByVisitor;
   private String m_sGroupByClause = "";
   private String m_sLimitClause = "";
+  private String m_sHavingClause = "";
   private boolean m_bDistinct = false;
 
   public SelectFromVisitor(AssociationResolver arResolver) {
@@ -74,17 +75,28 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
     return null;
   }
 
+  @Override public Void visitHaving_clause(@NotNull SQLParser.Having_clauseContext ctx) {
+    HavingVisitor haVisitor = new HavingVisitor(m_fmFromVisitor, m_arResolver);
+    haVisitor.visit(ctx);
+    m_sHavingClause = haVisitor.toString();
+    return null;
+  }
+
   public String toString() {
     ArrayList<String> alStatements = new ArrayList<String>();
     String sQuery = m_fmFromVisitor.getModelName() + ".select(" + m_svSelectVisitor.toString(m_fmFromVisitor) + ")";
 
     if (m_fmFromVisitor.hasSubquery()) {
-      sQuery += ".from(" + m_fmFromVisitor.getSubquery().toString();
+      sQuery += ".from(" + m_fmFromVisitor.getSubquery();
       sQuery += ".as(" + Utils.quote(m_fmFromVisitor.getSubqueryIdentifier()) + "))";
     }
 
     if (!m_sWhereClause.equals("")) {
       sQuery += ".where(" + m_sWhereClause + ")";
+    }
+
+    if (!m_sHavingClause.equals("")) {
+      sQuery += ".having(" + m_sHavingClause + ")";
     }
 
     sQuery += composeJoins();
