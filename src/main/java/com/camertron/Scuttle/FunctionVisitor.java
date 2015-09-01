@@ -16,8 +16,8 @@ public class FunctionVisitor extends ScuttleBaseVisitor {
   private ArrayList<String> m_alArgList = new ArrayList<String>();
   private boolean m_bIsAggregate = false;
 
-  public FunctionVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver) {
-    super(fmFromVisitor, arResolver);
+  public FunctionVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver, ScuttleOptions sptOptions) {
+    super(fmFromVisitor, arResolver, sptOptions);
   }
 
   @Override public Void visitAggregate_function(@NotNull SQLParser.Aggregate_functionContext ctx) {
@@ -95,7 +95,7 @@ public class FunctionVisitor extends ScuttleBaseVisitor {
   }
 
   @Override public Void visitValue_expression(@NotNull SQLParser.Value_expressionContext ctx) {
-    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_bIsAggregate);
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_bIsAggregate, m_sptOptions);
     veVisitor.visit(ctx);
     addArgument(veVisitor.toString());
     return null;
@@ -103,7 +103,7 @@ public class FunctionVisitor extends ScuttleBaseVisitor {
 
   private void addArgument(String arg) {
     if (arg != null) {
-      m_alArgList.add(ExpressionUtils.formatOperand(arg, false));
+      m_alArgList.add(ExpressionUtils.formatOperand(arg, false, m_sptOptions));
     }
   }
 
@@ -113,8 +113,8 @@ public class FunctionVisitor extends ScuttleBaseVisitor {
     if (m_alArgList.size() == 1 && m_bIsAggregate) {
       sFunctionCall = m_alArgList.get(0) + "." + m_sFunctionName.toLowerCase();
     } else {
-      sFunctionCall = "Arel::Nodes::NamedFunction.new(" +
-        Utils.quote(m_sFunctionName) + ", " + "[" + Utils.commaize(m_alArgList) + "]" +
+      sFunctionCall = m_sptOptions.namespaceArelNodeClass("NamedFunction") + ".new(" +
+        Utils.quote(m_sFunctionName) + ", " + Utils.arrayFormat(m_alArgList) +
       ")";
     }
 

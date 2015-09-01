@@ -21,14 +21,14 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
   private boolean m_bAs = false;
   private String m_sAlias;
 
-  public ValueExpressionVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver) {
-    super(fmFromVisitor, arResolver);
+  public ValueExpressionVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver, ScuttleOptions sptOptions) {
+    super(fmFromVisitor, arResolver, sptOptions);
     setup();
     m_bQualifyColumns = false;
   }
 
-  public ValueExpressionVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver, boolean bQualifyColumns) {
-    super(fmFromVisitor, arResolver);
+  public ValueExpressionVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver, boolean bQualifyColumns, ScuttleOptions sptOptions) {
+    super(fmFromVisitor, arResolver, sptOptions);
     setup();
     m_bQualifyColumns = bQualifyColumns;
   }
@@ -42,18 +42,18 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
     SQLParser.Between_predicate_part_2Context bpPartTwo = ctx.between_predicate_part_2();
 
     if (bpPartTwo != null) {
-      ValueExpressionVisitor vePredicandVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver);
+      ValueExpressionVisitor vePredicandVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
       vePredicandVisitor.visit(ctx.predicand);
 
-      ValueExpressionVisitor veBeginVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver);
+      ValueExpressionVisitor veBeginVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
       veBeginVisitor.visit(bpPartTwo.begin);
 
-      ValueExpressionVisitor veEndVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver);
+      ValueExpressionVisitor veEndVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
       veEndVisitor.visit(bpPartTwo.end);
 
-      String sFinal = "Arel::Nodes::Between.new(" + vePredicandVisitor.toString() + ", ";
-      sFinal += "(" + ExpressionUtils.formatOperand(veBeginVisitor.toString(), true, true) + ")";
-      sFinal += ".and(" + ExpressionUtils.formatOperand(veEndVisitor.toString(), false) + "))";
+      String sFinal = m_sptOptions.namespaceArelNodeClass("Between") + ".new(" + vePredicandVisitor.toString() + ", ";
+      sFinal += "(" + ExpressionUtils.formatOperand(veBeginVisitor.toString(), true, true, m_sptOptions) + ")";
+      sFinal += ".and(" + ExpressionUtils.formatOperand(veEndVisitor.toString(), false, m_sptOptions) + "))";
 
       m_stkOperandStack.push(StringOperand.fromString(sFinal));
     }
@@ -62,21 +62,21 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
   }
 
   @Override public Void visitSet_function_specification(@NotNull SQLParser.Set_function_specificationContext ctx) {
-    FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor, m_arResolver);
+    FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     funcVisitor.visit(ctx);
     m_stkOperandStack.push(StringOperand.fromString(funcVisitor.toString()));
     return null;
   }
 
   @Override public Void visitRoutine_invocation(@NotNull SQLParser.Routine_invocationContext ctx) {
-    FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor, m_arResolver);
+    FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     funcVisitor.visit(ctx);
     m_stkOperandStack.push(StringOperand.fromString(funcVisitor.toString()));
     return null;
   }
 
   @Override public Void visitAggregate_function(@NotNull SQLParser.Aggregate_functionContext ctx) {
-    FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor, m_arResolver);
+    FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     funcVisitor.visit(ctx);
     m_stkOperandStack.push(StringOperand.fromString(funcVisitor.toString()));
     return null;
@@ -130,7 +130,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
   }
 
   @Override public Void visitColumn_reference(@NotNull SQLParser.Column_referenceContext ctx) {
-    ColumnVisitor cVisitor = new ColumnVisitor(m_fmFromVisitor, m_arResolver);
+    ColumnVisitor cVisitor = new ColumnVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     cVisitor.visit(ctx);
     m_stkOperandStack.push(ColumnOperand.fromColumn(cVisitor));
     return null;
@@ -219,11 +219,11 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
     ArrayList<String> alInList = new ArrayList<String>();
 
     for(ParseTree child : ctx.children) {
-      ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver);
+      ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
       veVisitor.visit(child);
 
       if (veVisitor.toString() != null) {
-        alInList.add(ExpressionUtils.formatOperand(veVisitor.toString(), false));
+        alInList.add(ExpressionUtils.formatOperand(veVisitor.toString(), false, m_sptOptions));
       }
     }
 
@@ -235,7 +235,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
   }
 
   @Override public Void visitExists_predicate(SQLParser.Exists_predicateContext ctx) {
-    SelectFromVisitor visitor = new SelectFromVisitor(m_arResolver);
+    SelectFromVisitor visitor = new SelectFromVisitor(m_arResolver, m_sptOptions);
     visitor.visit(ctx.children.get(1));
 
     m_stkOperandStack.push(
@@ -247,7 +247,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
 
   // Triggered for sub-queries like you might have with an IN(), eg. WHERE id IN(SELECT id FROM foo)
   @Override public Void visitQuery_expression(SQLParser.Query_expressionContext ctx) {
-    SelectFromVisitor ssmtVisitor = new SelectFromVisitor(m_arResolver);
+    SelectFromVisitor ssmtVisitor = new SelectFromVisitor(m_arResolver, m_sptOptions);
     ssmtVisitor.visit(ctx);
     m_stkOperandStack.push(StringOperand.fromString(ssmtVisitor.toString() + ".ast"));
     return null;
@@ -264,7 +264,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
   }
 
   private void processLeftRight(ParseTree ptLeft, ParseTree ptRight, TerminalNodeImpl tniOperator) {
-    ValueExpressionVisitor veLeftVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver);
+    ValueExpressionVisitor veLeftVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     veLeftVisitor.visit(ptLeft);
     m_stkOperandStack.push(veLeftVisitor.evaluate());
 
@@ -275,7 +275,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       }
 
       // push right operand
-      ValueExpressionVisitor veRightVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver);
+      ValueExpressionVisitor veRightVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
       veRightVisitor.visit(ptRight);
       m_stkOperandStack.push(veRightVisitor.evaluate());
     }
@@ -310,7 +310,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
         switch(getOperatorType(tniOperator)) {
           case BINARY:
             Operand odSecondOperand = stkOperandStack.pop();
-            String sSecondOperand = ExpressionUtils.formatOperand(odSecondOperand.toString(), false);
+            String sSecondOperand = ExpressionUtils.formatOperand(odSecondOperand.toString(), false, m_sptOptions);
             Operand odFirstOperand = stkOperandStack.pop();
 
             if (isMethodOperator(tniOperator)) {
@@ -319,7 +319,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
               }
 
               String sFirstOperand = ExpressionUtils.formatOperand(
-                odFirstOperand.toString(), true
+                odFirstOperand.toString(), true, m_sptOptions
               );
 
               stkOperandStack.push(
@@ -328,7 +328,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
                 )
               );
             } else {
-              String sFirstOperand = ExpressionUtils.formatOperand(odFirstOperand.toString(), true);
+              String sFirstOperand = ExpressionUtils.formatOperand(odFirstOperand.toString(), true, m_sptOptions);
 
               stkOperandStack.push(
                 StringOperand.fromString(
@@ -342,7 +342,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
               case SQLParser.LEFT_PAREN:
                 stkOperandStack.push(
                   StringOperand.fromString(
-                    "Arel::Nodes::Group.new(" + stkOperandStack.pop().toString() + ")"
+                    m_sptOptions.namespaceArelNodeClass("Group") + ".new(" + stkOperandStack.pop().toString() + ")"
                   )
                 );
 
@@ -369,7 +369,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       } else {
         odFinal = StringOperand.fromString(
           ExpressionUtils.formatOperand(
-            odOperand.toString(), isMethodOperator(tniOperator)
+            odOperand.toString(), isMethodOperator(tniOperator), m_sptOptions
           )
         );
       }

@@ -9,8 +9,8 @@ public class ColumnVisitor extends ScuttleBaseVisitor {
   private String m_sColumnName;
   private String m_sExpression;
 
-  public ColumnVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver) {
-    super(fmFromVisitor, arResolver);
+  public ColumnVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver, ScuttleOptions sptOptions) {
+    super(fmFromVisitor, arResolver, sptOptions);
   }
 
   @Override public Void visitQualified_asterisk(@NotNull SQLParser.Qualified_asteriskContext ctx) {
@@ -23,7 +23,7 @@ public class ColumnVisitor extends ScuttleBaseVisitor {
   }
 
   @Override public Void visitDerived_column(@NotNull SQLParser.Derived_columnContext ctx) {
-    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver);
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     veVisitor.visit(ctx);
     m_sExpression = veVisitor.toString();
     return null;
@@ -62,7 +62,7 @@ public class ColumnVisitor extends ScuttleBaseVisitor {
         if (m_fmFromVisitor != null && m_fmFromVisitor.hasSubquery()) {
           return m_fmFromVisitor.getSubqueryIdentifier() + "[" + getColumnName() + "]";
         } else {
-          return sTableName + ".arel_table[" + getColumnName() + "]";
+          return m_sptOptions.formatArelColumn(sTableName, getColumnName());
         }
       }
     }

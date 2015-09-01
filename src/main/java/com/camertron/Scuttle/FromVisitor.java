@@ -11,18 +11,21 @@ public class FromVisitor extends SQLParserBaseVisitor<Void> {
   private String m_sTableName;
   private String m_sSubqueryIdentifier;
   private SelectFromVisitor m_stmtSubquery;
+  private ScuttleOptions m_sptOptions;
   private ArrayList<JoinVisitor> m_alJoins;
   private AssociationResolver m_arResolver;
 
-  public FromVisitor(AssociationResolver arResolver) {
+  public FromVisitor(AssociationResolver arResolver, ScuttleOptions sptOptions) {
     super();
     m_arResolver = arResolver;
     m_alJoins = new ArrayList<JoinVisitor>();
+    m_sptOptions = sptOptions;
   }
 
-  public FromVisitor(String sTableName) {
+  public FromVisitor(String sTableName, ScuttleOptions sptOptions) {
     super();
     m_sTableName = sTableName;
+    m_sptOptions = sptOptions;
   }
 
   @Override public Void visitTable_primary(@NotNull SQLParser.Table_primaryContext ctx) {
@@ -39,14 +42,14 @@ public class FromVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitJoined_table_primary(@NotNull SQLParser.Joined_table_primaryContext ctx) {
-    JoinVisitor jnVisitor = new JoinVisitor(this, m_arResolver);
+    JoinVisitor jnVisitor = new JoinVisitor(this, m_arResolver, m_sptOptions);
     jnVisitor.visit(ctx);
     m_alJoins.add(jnVisitor);
     return null;
   }
 
   @Override public Void visitTable_subquery(@NotNull SQLParser.Table_subqueryContext ctx) {
-    SelectFromVisitor ssVisitor = new SelectFromVisitor(m_arResolver);
+    SelectFromVisitor ssVisitor = new SelectFromVisitor(m_arResolver, m_sptOptions);
     ssVisitor.visit(ctx);
     m_stmtSubquery = ssVisitor;
     return null;
