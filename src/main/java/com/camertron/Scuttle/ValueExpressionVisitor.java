@@ -234,6 +234,17 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
     return null;
   }
 
+  @Override public Void visitExists_predicate(SQLParser.Exists_predicateContext ctx) {
+    SelectFromVisitor visitor = new SelectFromVisitor(m_arResolver);
+    visitor.visit(ctx.children.get(1));
+
+    m_stkOperandStack.push(
+      StringOperand.fromString(visitor.toString() + ".exists")
+    );
+
+    return null;
+  }
+
   // Triggered for sub-queries like you might have with an IN(), eg. WHERE id IN(SELECT id FROM foo)
   @Override public Void visitQuery_expression(SQLParser.Query_expressionContext ctx) {
     SelectFromVisitor ssmtVisitor = new SelectFromVisitor(m_arResolver);

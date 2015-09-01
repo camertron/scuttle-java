@@ -160,16 +160,4 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
     JoinManager jmJoinManager = new JoinManager(m_alJoins, m_arResolver);
     return jmJoinManager.toString();
   }
-
-//  private String composeJoins() {
-//    StringBuilder sbJoins = new StringBuilder();
-//
-//    if (!m_alJoins.isEmpty()) {
-//      for(JoinVisitor join : m_alJoins) {
-//        sbJoins.append(".joins(" + join.toString() + ".join_sources)");
-//      }
-//    }
-//
-//    return sbJoins.toString();
-//  }
 }
