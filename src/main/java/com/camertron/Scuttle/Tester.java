@@ -94,7 +94,8 @@ public class Tester {
 //    str = "SELECT `authors`.* FROM `authors` INNER JOIN `comments` ON `comments`.`author_id` = `authors`.`id` INNER JOIN `posts` ON `posts`.`id` = `comments`.`my_post_id` INNER JOIN `favorites` ON `favorites`.`post_id` = `posts`.`id`";
 //    str = "SELECT * FROM posts INNER JOIN comments ON posts.id = comments.my_post_id";
 //    str = "SELECT * FROM comments INNER JOIN posts ON comments.my_post_id = posts.id";
-    str = "SELECT * FROM provider_bill_items WHERE cpt_code IS NULL";
+//    str = "SELECT * FROM provider_bill_items WHERE cpt_code IS NULL";
+    str = "SELECT game_events.name, sum(CASE WHEN game_events.has_happened THEN 1 ELSE 0 END) total_has_happened FROM game_events GROUP BY game_events.name;";
     CharStream in = new ANTLRInputStream(str);
     SQLLexer lexer = new SQLLexer(in);
     CommonTokenStream tokens = new CommonTokenStream(lexer);

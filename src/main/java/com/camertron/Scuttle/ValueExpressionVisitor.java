@@ -2,7 +2,9 @@ package com.camertron.Scuttle;
 
 import com.camertron.SQLParser.SQLParser;
 import com.camertron.Scuttle.Resolver.AssociationResolver;
+import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonToken;
+import org.antlr.v4.runtime.misc.Interval;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
@@ -57,6 +59,18 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
 
       m_stkOperandStack.push(StringOperand.fromString(sFinal));
     }
+
+    return null;
+  }
+
+  @Override public Void visitCase_expression(@NotNull SQLParser.Case_expressionContext ctx) {
+    CharStream stream = ctx.start.getInputStream();
+    Interval interval = new Interval(ctx.start.getStartIndex(), ctx.stop.getStopIndex());
+    String text = stream.getText(interval);
+
+    m_stkOperandStack.push(
+      StringOperand.fromString("Arel.sql(" + Utils.quote(text) + ")")
+    );
 
     return null;
   }
