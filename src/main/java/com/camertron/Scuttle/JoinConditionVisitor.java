@@ -8,8 +8,8 @@ public class JoinConditionVisitor extends ValueExpressionVisitor {
   private TerminalNodeImpl[] m_operators;
   private Operand[] m_operands;
 
-  public JoinConditionVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver) {
-    super(fmFromVisitor, arResolver);
+  public JoinConditionVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver, ScuttleOptions sptOptions) {
+    super(fmFromVisitor, arResolver, sptOptions);
   }
 
   public boolean isActiveRecordCompatible() {

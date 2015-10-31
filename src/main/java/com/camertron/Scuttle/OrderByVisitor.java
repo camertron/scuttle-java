@@ -10,14 +10,14 @@ import java.util.ArrayList;
 public class OrderByVisitor extends ScuttleBaseVisitor {
   private ArrayList<OrderVisitor> m_alOrders = new ArrayList<OrderVisitor>();
 
-  public OrderByVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver) {
-    super(fmFromVisitor, arResolver);
+  public OrderByVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver, ScuttleOptions sptOptions) {
+    super(fmFromVisitor, arResolver, sptOptions);
   }
 
   @Override public Void visitSort_specifier_list(@NotNull SQLParser.Sort_specifier_listContext ctx) {
     for(ParseTree child : ctx.children) {
       if (child.getClass() == SQLParser.Sort_specifierContext.class) {
-        OrderVisitor odrVisitor = new OrderVisitor(m_fmFromVisitor, m_arResolver);
+        OrderVisitor odrVisitor = new OrderVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
         odrVisitor.visit(child);
         m_alOrders.add(odrVisitor);
       }

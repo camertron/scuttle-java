@@ -17,8 +17,8 @@ public class JoinVisitor extends ScuttleBaseVisitor {
   private boolean m_bInner = false;
   private boolean m_bOuter = false;
 
-  public JoinVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver) {
-    super(fmFromVisitor, arResolver);
+  public JoinVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver, ScuttleOptions sptOptions) {
+    super(fmFromVisitor, arResolver, sptOptions);
   }
 
   @Override public Void visitTable_name(@NotNull SQLParser.Table_nameContext ctx) {
@@ -32,7 +32,7 @@ public class JoinVisitor extends ScuttleBaseVisitor {
       setJoinType(gatherTerminals(ctx.t));
     }
 
-    JoinConditionVisitor veVisitor = new JoinConditionVisitor(m_fmFromVisitor, m_arResolver);
+    JoinConditionVisitor veVisitor = new JoinConditionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     veVisitor.visit(ctx.s);
     m_jcConditionVisitor = veVisitor;
     visit(ctx.right);
@@ -71,7 +71,7 @@ public class JoinVisitor extends ScuttleBaseVisitor {
     String sJoin = m_fmFromVisitor.getTableRef() + ".arel_table.join(" + getTableName() + ".arel_table";
 
     if (m_bOuter) {
-      sJoin += ", Arel::Nodes::OuterJoin";
+      sJoin += ", " + m_sptOptions.namespaceArelNodeClass("OuterJoin");
     }
 
     return sJoin + ")" + ".on(" + m_jcConditionVisitor.toString() + ")";

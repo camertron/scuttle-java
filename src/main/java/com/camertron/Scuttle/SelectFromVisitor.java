@@ -10,20 +10,23 @@ import java.util.ArrayList;
 public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
   private FromVisitor m_fmFromVisitor;
   private AssociationResolver m_arResolver;
+  private ScuttleOptions m_sptOptions;
   private ArrayList<JoinVisitor> m_alJoins = new ArrayList<JoinVisitor>();
   private SelectVisitor m_svSelectVisitor;
   private String m_sWhereClause = "";
   private OrderByVisitor m_obOrderByVisitor;
   private String m_sGroupByClause = "";
   private String m_sLimitClause = "";
+  private String m_sHavingClause = "";
   private boolean m_bDistinct = false;
 
-  public SelectFromVisitor(AssociationResolver arResolver) {
+  public SelectFromVisitor(AssociationResolver arResolver, ScuttleOptions sptOptions) {
     m_arResolver = arResolver;
+    m_sptOptions = sptOptions;
   }
 
   @Override public Void visitSelect_list(@NotNull SQLParser.Select_listContext ctx) {
-    SelectVisitor selVisitor = new SelectVisitor(m_fmFromVisitor, m_arResolver);
+    SelectVisitor selVisitor = new SelectVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     selVisitor.visit(ctx);
     m_svSelectVisitor = selVisitor;
     return null;
@@ -39,7 +42,7 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitFrom_clause(@NotNull SQLParser.From_clauseContext ctx) {
-    FromVisitor fmVisitor = new FromVisitor(m_arResolver);
+    FromVisitor fmVisitor = new FromVisitor(m_arResolver, m_sptOptions);
     fmVisitor.visit(ctx);
     m_fmFromVisitor = fmVisitor;
     m_alJoins.addAll(fmVisitor.getJoins());
@@ -47,30 +50,37 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitWhere_clause(@NotNull SQLParser.Where_clauseContext ctx) {
-    WhereVisitor whVisitor = new WhereVisitor(m_fmFromVisitor, m_arResolver);
+    WhereVisitor whVisitor = new WhereVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     whVisitor.visit(ctx);
     m_sWhereClause = whVisitor.toString();
     return null;
   }
 
   @Override public Void visitOrderby_clause(@NotNull SQLParser.Orderby_clauseContext ctx) {
-    OrderByVisitor obVisitor = new OrderByVisitor(m_fmFromVisitor, m_arResolver);
+    OrderByVisitor obVisitor = new OrderByVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     obVisitor.visit(ctx);
     m_obOrderByVisitor = obVisitor;
     return null;
   }
 
   @Override public Void visitGroupby_clause(@NotNull SQLParser.Groupby_clauseContext ctx) {
-    GroupByVisitor gbVisitor = new GroupByVisitor(m_fmFromVisitor, m_arResolver);
+    GroupByVisitor gbVisitor = new GroupByVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     gbVisitor.visit(ctx);
     m_sGroupByClause = gbVisitor.toString();
     return null;
   }
 
   @Override public Void visitLimit_clause(@NotNull SQLParser.Limit_clauseContext ctx) {
-    LimitVisitor lmVisitor = new LimitVisitor(m_fmFromVisitor, m_arResolver);
+    LimitVisitor lmVisitor = new LimitVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     lmVisitor.visit(ctx);
     m_sLimitClause = lmVisitor.toString();
+    return null;
+  }
+
+  @Override public Void visitHaving_clause(@NotNull SQLParser.Having_clauseContext ctx) {
+    HavingVisitor haVisitor = new HavingVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
+    haVisitor.visit(ctx);
+    m_sHavingClause = haVisitor.toString();
     return null;
   }
 
@@ -79,12 +89,16 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
     String sQuery = m_fmFromVisitor.getModelName() + ".select(" + m_svSelectVisitor.toString(m_fmFromVisitor) + ")";
 
     if (m_fmFromVisitor.hasSubquery()) {
-      sQuery += ".from(" + m_fmFromVisitor.getSubquery().toString();
+      sQuery += ".from(" + m_fmFromVisitor.getSubquery();
       sQuery += ".as(" + Utils.quote(m_fmFromVisitor.getSubqueryIdentifier()) + "))";
     }
 
     if (!m_sWhereClause.equals("")) {
       sQuery += ".where(" + m_sWhereClause + ")";
+    }
+
+    if (!m_sHavingClause.equals("")) {
+      sQuery += ".having(" + m_sHavingClause + ")";
     }
 
     sQuery += composeJoins();
@@ -160,16 +174,4 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
     JoinManager jmJoinManager = new JoinManager(m_alJoins, m_arResolver);
     return jmJoinManager.toString();
   }
-
-//  private String composeJoins() {
-//    StringBuilder sbJoins = new StringBuilder();
-//
-//    if (!m_alJoins.isEmpty()) {
-//      for(JoinVisitor join : m_alJoins) {
-//        sbJoins.append(".joins(" + join.toString() + ".join_sources)");
-//      }
-//    }
-//
-//    return sbJoins.toString();
-//  }
 }

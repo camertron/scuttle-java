@@ -9,8 +9,8 @@ import java.util.ArrayList;
 public class SelectVisitor extends ScuttleBaseVisitor {
   private SQLParser.Select_listContext m_slcSelectList;
 
-  public SelectVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver) {
-    super(fmFromVisitor, arResolver);
+  public SelectVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver, ScuttleOptions sptOptions) {
+    super(fmFromVisitor, arResolver, sptOptions);
   }
 
   @Override public Void visitSelect_list(@NotNull SQLParser.Select_listContext ctx) {
@@ -25,14 +25,14 @@ public class SelectVisitor extends ScuttleBaseVisitor {
       alColumns.add(colVisitor.toString());
     }
 
-    return Utils.commaize(alColumns);
+    return Utils.singletonArrayFormat(alColumns);
   }
 
   private ArrayList<ColumnVisitor> getColumns(FromVisitor fmFromVisitor) {
     ArrayList<ColumnVisitor> alColumns = new ArrayList<ColumnVisitor>();
 
     for (SQLParser.Select_sublistContext sublistItemContext : m_slcSelectList.select_sublist()) {
-      ColumnVisitor colVisitor = new ColumnVisitor(fmFromVisitor, m_arResolver);
+      ColumnVisitor colVisitor = new ColumnVisitor(fmFromVisitor, m_arResolver, m_sptOptions);
       colVisitor.visit(sublistItemContext);
       alColumns.add(colVisitor);
     }

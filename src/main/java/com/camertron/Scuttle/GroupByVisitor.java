@@ -11,13 +11,13 @@ import java.util.ArrayList;
 public class GroupByVisitor extends ScuttleBaseVisitor {
   ArrayList<String> m_alGroups = new ArrayList<String>();
 
-  public GroupByVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver) {
-    super(fmFromVisitor, arResolver);
+  public GroupByVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver, ScuttleOptions sptOptions) {
+    super(fmFromVisitor, arResolver, sptOptions);
   }
 
   @Override public Void visitGrouping_element_list(@NotNull SQLParser.Grouping_element_listContext ctx) {
     for(ParseTree child : ctx.children) {
-      GroupVisitor gVisitor = new GroupVisitor(m_fmFromVisitor, m_arResolver);
+      GroupVisitor gVisitor = new GroupVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
       gVisitor.visit(child);
       String sResult = gVisitor.toString();
 
