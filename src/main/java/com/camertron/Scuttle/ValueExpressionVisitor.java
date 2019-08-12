@@ -112,6 +112,27 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
     return null;
   }
 
+  @Override public Void visitWindow_function(@NotNull SQLParser.Window_functionContext ctx) {
+    String operand;
+
+    if (ctx.window_function_type().ROW_NUMBER() != null) {
+      operand = "Arel::Nodes::NamedFunction.new('ROW_NUMBER', [])";
+    } else if (ctx.window_function_type().aggregate_function() != null) {
+      FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
+      funcVisitor.visit(ctx.window_function_type().aggregate_function());
+      operand = funcVisitor.toString();
+    } else if (ctx.window_function_type().column_reference() != null) {
+      ColumnVisitor columnVisitor = new ColumnVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
+      columnVisitor.visit(ctx.window_function_type().column_reference());
+      operand = columnVisitor.toString();
+    } else {
+      throw new RuntimeException("Could not determine window function type");
+    }
+
+    m_stkOperandStack.push(StringOperand.fromString(operand + ".over"));
+    return null;
+  }
+
   @Override public Void visitNull_predicate(@NotNull SQLParser.Null_predicateContext ctx) {
     if (ctx.n == null)
       m_stkOperatorStack.push((TerminalNodeImpl)ctx.NULL());

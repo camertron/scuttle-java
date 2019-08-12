@@ -30,11 +30,13 @@ public class ColumnVisitor extends ScuttleBaseVisitor {
   }
 
   @Override public Void visitColumn_reference(@NotNull SQLParser.Column_referenceContext ctx) {
-    if (ctx.tb_name != null) {
-      m_sTableName = ctx.tb_name.getText();
+    if (ctx.identifier().size() > 1) {
+      m_sTableName = ctx.identifier(0).getText();
+      m_sColumnName = ctx.identifier(1).getText();
+    } else {
+      m_sColumnName = ctx.identifier(0).getText();
     }
 
-    m_sColumnName = ctx.name.getText();
     visitChildren(ctx);
     return null;
   }
@@ -85,7 +87,7 @@ public class ColumnVisitor extends ScuttleBaseVisitor {
   public String getColumnName() {
     String sRawColumnName = getRawColumnName();
 
-    if (sRawColumnName == "*") {
+    if (sRawColumnName.equals("*")) {
       return "Arel.star";
     } else {
       return Utils.symbolize(sRawColumnName);
