@@ -21,13 +21,13 @@ public class InsertVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitInsert_statement(@NotNull SQLParser.Insert_statementContext ctx) {
-    m_fmFromVisitor = new FromVisitor(ctx.tb_name.getText(), m_sptOptions);
+    m_fmFromVisitor = new FromVisitor(ctx.table_name().getText(), m_sptOptions);
 
-    for(ParseTree column : ctx.column_name_list().children) {
+    for(SQLParser.Column_referenceContext column : ctx.column_reference_list().column_reference()) {
       m_alColumns.add(":" + column.getText());
     }
 
-    for(ParseTree value : ctx.insert_value_list().children) {
+    for(SQLParser.Row_value_predicandContext value : ctx.row_value_predicand()) {
       ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
       veVisitor.visit(value);
       m_alValues.add(ExpressionUtils.formatOperand(veVisitor.toString(), false, m_sptOptions));

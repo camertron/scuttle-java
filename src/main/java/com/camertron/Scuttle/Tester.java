@@ -95,11 +95,13 @@ public class Tester {
 //    str = "SELECT * FROM posts INNER JOIN comments ON posts.id = comments.my_post_id";
 //    str = "SELECT * FROM comments INNER JOIN posts ON comments.my_post_id = posts.id";
 //    str = "SELECT * FROM provider_bill_items WHERE cpt_code IS NULL";
-    str = "SELECT game_events.name, sum(CASE WHEN game_events.has_happened THEN 1 ELSE 0 END) total_has_happened FROM game_events GROUP BY game_events.name;";
+//    str = "SELECT game_events.name, sum(CASE WHEN game_events.has_happened THEN 1 ELSE 0 END) total_has_happened FROM game_events GROUP BY game_events.name;";
 //    str = "SELECT * from phrases WHERE id IN (1, 2, 3, 4)";
 //    str = "SELECT `articles`.`id`, `articles`.`title`, MAX(`revisions`.`wp10`) AS revision_score, `revisions`.`user_id` FROM `articles` INNER JOIN `revisions` ON `articles`.`id` = `revisions`.`article_id` WHERE (`revisions`.`wp10` > 40 AND `articles`.`namespace` IN (2, 118)) GROUP BY `articles`.`id`";
 //    str = "SELECT * from articles WHERE EXISTS (SELECT * from revisions)";
 //    str = "SELECT * FROM `articles` HAVING COUNT(`articles`.`id`) <= 16 LIMIT 15";
+//    str = "SELECT row_number() OVER() AS id, COUNT(*) as session_count, FROM session_traffic_sources GROUP BY session_traffic_sources.traffic_source";
+    str = "SELECT row_number() OVER() AS id, COUNT(*) as session_count FROM session_traffic_sources GROUP BY session_traffic_sources.traffic_source";
     CharStream in = new ANTLRInputStream(str);
     SQLLexer lexer = new SQLLexer(in);
     CommonTokenStream tokens = new CommonTokenStream(lexer);

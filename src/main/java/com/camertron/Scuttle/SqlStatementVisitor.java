@@ -3,7 +3,6 @@ package com.camertron.Scuttle;
 import com.camertron.SQLParser.SQLParser;
 import com.camertron.SQLParser.SQLParserBaseVisitor;
 import com.camertron.Scuttle.Resolver.AssociationResolver;
-import com.sun.deploy.association.Association;
 import org.antlr.v4.runtime.misc.NotNull;
 
 public class SqlStatementVisitor extends SQLParserBaseVisitor<Void> {

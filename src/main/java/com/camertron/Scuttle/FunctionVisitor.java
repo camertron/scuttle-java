@@ -114,7 +114,7 @@ public class FunctionVisitor extends ScuttleBaseVisitor {
       sFunctionCall = m_alArgList.get(0) + "." + m_sFunctionName.toLowerCase();
     } else {
       sFunctionCall = m_sptOptions.namespaceArelNodeClass("NamedFunction") + ".new(" +
-        Utils.quote(m_sFunctionName) + ", " + Utils.arrayFormat(m_alArgList) +
+        Utils.quote(m_sFunctionName.toUpperCase()) + ", " + Utils.arrayFormat(m_alArgList) +
       ")";
     }
 
