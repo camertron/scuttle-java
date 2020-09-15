@@ -13,7 +13,7 @@
       <groupId>com.camertron.SQLParser</groupId>
       <artifactId>SQLParser</artifactId>
       <scope>system</scope>
-      <systemPath>/Users/cameron/workspace/SQLParser/out/artifacts/SQLParser.jar</systemPath>
+      <systemPath>/Users/cdutro/workspace/SQLParser/out/artifacts/SQLParser.jar</systemPath>
       <version>1.0-SNAPSHOT</version>
     </dependency>
 

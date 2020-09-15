@@ -284,7 +284,17 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
   @Override public Void visitQuery_expression(SQLParser.Query_expressionContext ctx) {
     SelectFromVisitor ssmtVisitor = new SelectFromVisitor(m_arResolver, m_sptOptions);
     ssmtVisitor.visit(ctx);
-    m_stkOperandStack.push(StringOperand.fromString(ssmtVisitor.toString() + ".ast"));
+
+    StringOperand operand;
+
+    if (m_sptOptions.getRailsVersion().lessThan("6.0.0")) {
+      operand = StringOperand.fromString(ssmtVisitor.toString() + ".ast");
+    } else {
+      operand = StringOperand.fromString(ssmtVisitor.toString());
+    }
+
+    m_stkOperandStack.push(operand);
+
     return null;
   }
 

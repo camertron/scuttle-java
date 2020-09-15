@@ -101,7 +101,8 @@ public class Tester {
 //    str = "SELECT * from articles WHERE EXISTS (SELECT * from revisions)";
 //    str = "SELECT * FROM `articles` HAVING COUNT(`articles`.`id`) <= 16 LIMIT 15";
 //    str = "SELECT row_number() OVER() AS id, COUNT(*) as session_count, FROM session_traffic_sources GROUP BY session_traffic_sources.traffic_source";
-    str = "SELECT row_number() OVER() AS id, COUNT(*) as session_count FROM session_traffic_sources GROUP BY session_traffic_sources.traffic_source";
+//    str = "SELECT row_number() OVER() AS id, COUNT(*) as session_count FROM session_traffic_sources GROUP BY session_traffic_sources.traffic_source";
+    str = "select * from client_blog_allocations where allocation_id = 12 and role_id = 76 and blog_id in (select id from blogs where state in ('deployed', 'suspended'))";
     CharStream in = new ANTLRInputStream(str);
     SQLLexer lexer = new SQLLexer(in);
     CommonTokenStream tokens = new CommonTokenStream(lexer);
@@ -110,6 +111,7 @@ public class Tester {
     ScuttleOptions options = new ScuttleOptions();
     options.useArelNodesPrefix(false);
     options.useArelHelpers(true);
+    options.useRailsVersion("5.1.0");
     SqlStatementVisitor ssVisitor = new SqlStatementVisitor(manager.createResolver(), options);
     ssVisitor.visit(result);
     System.out.println(ssVisitor.toString());
