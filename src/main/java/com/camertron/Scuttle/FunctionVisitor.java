@@ -27,7 +27,7 @@ public class FunctionVisitor extends ScuttleBaseVisitor {
     // as a terminal node instead of allowing the function name to be handled by the visitFunction_name
     // or visitSet_function_type visitor methods. Weird but true.
     m_sFunctionName = getFunctionNameFromTerminalNode(getTerminalNode(ctx.children.get(0)));
-//
+
     // Handle special symbol args like "*", which come to us as terminal nodes instead of via visitValue_expression.
     addTerminalNodesAsArgs(ctx.children);
     visitChildren(ctx);
