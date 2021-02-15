@@ -44,18 +44,13 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
     SQLParser.Between_predicate_part_2Context bpPartTwo = ctx.between_predicate_part_2();
 
     if (bpPartTwo != null) {
-      ValueExpressionVisitor vePredicandVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
-      vePredicandVisitor.visit(ctx.predicand);
+      String sPredicand = visitValueExpression(ctx.predicand);
+      String sBegin = visitValueExpression(bpPartTwo.begin);
+      String sEnd = visitValueExpression(bpPartTwo.end);
 
-      ValueExpressionVisitor veBeginVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
-      veBeginVisitor.visit(bpPartTwo.begin);
-
-      ValueExpressionVisitor veEndVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
-      veEndVisitor.visit(bpPartTwo.end);
-
-      String sFinal = m_sptOptions.namespaceArelNodeClass("Between") + ".new(" + vePredicandVisitor.toString() + ", ";
-      sFinal += "(" + ExpressionUtils.formatOperand(veBeginVisitor.toString(), true, true, m_sptOptions) + ")";
-      sFinal += ".and(" + ExpressionUtils.formatOperand(veEndVisitor.toString(), false, m_sptOptions) + "))";
+      String sFinal = m_sptOptions.namespaceArelNodeClass("Between") + ".new(" + sPredicand + ", ";
+      sFinal += "(" + ExpressionUtils.formatOperand(sBegin, true, true, m_sptOptions) + ")";
+      sFinal += ".and(" + ExpressionUtils.formatOperand(sEnd, false, m_sptOptions) + "))";
 
       m_stkOperandStack.push(StringOperand.fromString(sFinal));
     }
@@ -64,6 +59,12 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
   }
 
   @Override public Void visitCase_expression(@NotNull SQLParser.Case_expressionContext ctx) {
+    // CASE statements were added in Arel 7.0, i.e. Rails 5.0. If we're >= 5.0, visit children
+    // to invoke visitSimple_case and visitSearched_case below.
+    if (m_sptOptions.m_svRailsVersion.greaterThanOrEqualTo("5.0.0")) {
+      return visitChildren(ctx);
+    }
+
     CharStream stream = ctx.start.getInputStream();
     Interval interval = new Interval(ctx.start.getStartIndex(), ctx.stop.getStopIndex());
     String text = stream.getText(interval);
@@ -72,6 +73,58 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       StringOperand.fromString("Arel.sql(" + Utils.quote(text) + ")")
     );
 
+    return null;
+  }
+
+  @Override public Void visitSimple_case(@NotNull SQLParser.Simple_caseContext ctx) {
+    StringBuilder result = new StringBuilder();
+
+    result.append("Arel::Nodes::Case.new");
+    if (!ctx.simple_when_clause().isEmpty()) {
+      result.append("(");
+    }
+
+    result.append(visitValueExpression(ctx.boolean_value_expression()));
+    result.append(")");
+
+    for (SQLParser.Simple_when_clauseContext when : ctx.simple_when_clause()) {
+      result.append(".when(");
+      result.append(ExpressionUtils.formatOperand(visitValueExpression(when.search_condition()), false, m_sptOptions));
+      result.append(").then(");
+      result.append(ExpressionUtils.formatOperand(visitValueExpression(when.result()), false, m_sptOptions));
+      result.append(")");
+    }
+
+    if (ctx.else_clause() != null) {
+      result.append(".else(");
+      result.append(ExpressionUtils.formatOperand(visitValueExpression(ctx.else_clause()), false, m_sptOptions));
+      result.append(")");
+    }
+
+    m_stkOperandStack.push(StringOperand.fromString(result.toString()));
+    return null;
+  }
+
+  @Override public Void visitSearched_case(@NotNull SQLParser.Searched_caseContext ctx) {
+    StringBuilder result = new StringBuilder();
+    result.append("Arel::Nodes::Case.new");
+
+    for (SQLParser.Searched_when_clauseContext when : ctx.searched_when_clause()) {
+      result.append(".when(");
+      result.append(ExpressionUtils.formatOperand(visitValueExpression(when.search_condition()), false, m_sptOptions));
+      result.append(")");
+      result.append(".then(");
+      result.append(ExpressionUtils.formatOperand(visitValueExpression(when.result()), false, m_sptOptions));
+      result.append(")");
+    }
+
+    if (ctx.else_clause() != null) {
+      result.append(".else(");
+      result.append(ExpressionUtils.formatOperand(visitValueExpression(ctx.else_clause()), false, m_sptOptions));
+      result.append(")");
+    }
+
+    m_stkOperandStack.push(StringOperand.fromString(result.toString()));
     return null;
   }
 
@@ -254,11 +307,10 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
     ArrayList<String> alInList = new ArrayList<String>();
 
     for(ParseTree child : ctx.children) {
-      ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
-      veVisitor.visit(child);
+      String sInValue = visitValueExpression(child);
 
-      if (veVisitor.toString() != null) {
-        alInList.add(ExpressionUtils.formatOperand(veVisitor.toString(), false, m_sptOptions));
+      if (sInValue != null) {
+        alInList.add(ExpressionUtils.formatOperand(sInValue, false, m_sptOptions));
       }
     }
 
@@ -309,9 +361,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
   }
 
   private void processLeftRight(ParseTree ptLeft, ParseTree ptRight, TerminalNodeImpl tniOperator) {
-    ValueExpressionVisitor veLeftVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
-    veLeftVisitor.visit(ptLeft);
-    m_stkOperandStack.push(veLeftVisitor.evaluate());
+    m_stkOperandStack.push(evaluateValueExpression(ptLeft));
 
     if (ptRight != null) {
       // push operator
@@ -320,9 +370,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       }
 
       // push right operand
-      ValueExpressionVisitor veRightVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
-      veRightVisitor.visit(ptRight);
-      m_stkOperandStack.push(veRightVisitor.evaluate());
+      m_stkOperandStack.push(evaluateValueExpression(ptRight));
     }
   }
 
@@ -340,6 +388,18 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       return null;
     else
       return odResult.toString();
+  }
+
+  private String visitValueExpression(ParseTree exp) {
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
+    veVisitor.visit(exp);
+    return veVisitor.toString();
+  }
+
+  private Operand evaluateValueExpression(ParseTree exp) {
+    ValueExpressionVisitor veVisitor = new ValueExpressionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
+    veVisitor.visit(exp);
+    return veVisitor.evaluate();
   }
 
   private Operand evaluate() {

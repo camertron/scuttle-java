@@ -61,7 +61,7 @@ public class Tester {
 //      }
 //    }
 
-    String str = "SELECT COALESCE(1, 'a', (oxen.key + 1)) AS `col`, COUNT(*), STRLEN(phrases.key), created_at FROM phrases";
+//    String str = "SELECT COALESCE(1, 'a', (oxen.key + 1)) AS `col`, COUNT(*), STRLEN(phrases.key), created_at FROM phrases";
 //    str = "SELECT phrases.key + (phrases.key / 2) AS 'foobar' FROM phrases";
 //    str = "SELECT phrases.* FROM phrases";
 //    str = "SELECT MAX(phrases.created_at) FROM phrases";
@@ -95,14 +95,22 @@ public class Tester {
 //    str = "SELECT * FROM posts INNER JOIN comments ON posts.id = comments.my_post_id";
 //    str = "SELECT * FROM comments INNER JOIN posts ON comments.my_post_id = posts.id";
 //    str = "SELECT * FROM provider_bill_items WHERE cpt_code IS NULL";
-//    str = "SELECT game_events.name, sum(CASE WHEN game_events.has_happened THEN 1 ELSE 0 END) total_has_happened FROM game_events GROUP BY game_events.name;";
+//    str = "SELECT game_events.name, sum(CASE game_events.foo WHEN game_events.has_happened THEN 1 ELSE 0 END) total_has_happened FROM game_events GROUP BY game_events.name;";
 //    str = "SELECT * from phrases WHERE id IN (1, 2, 3, 4)";
 //    str = "SELECT `articles`.`id`, `articles`.`title`, MAX(`revisions`.`wp10`) AS revision_score, `revisions`.`user_id` FROM `articles` INNER JOIN `revisions` ON `articles`.`id` = `revisions`.`article_id` WHERE (`revisions`.`wp10` > 40 AND `articles`.`namespace` IN (2, 118)) GROUP BY `articles`.`id`";
 //    str = "SELECT * from articles WHERE EXISTS (SELECT * from revisions)";
 //    str = "SELECT * FROM `articles` HAVING COUNT(`articles`.`id`) <= 16 LIMIT 15";
 //    str = "SELECT row_number() OVER() AS id, COUNT(*) as session_count, FROM session_traffic_sources GROUP BY session_traffic_sources.traffic_source";
 //    str = "SELECT row_number() OVER() AS id, COUNT(*) as session_count FROM session_traffic_sources GROUP BY session_traffic_sources.traffic_source";
-    str = "select * from client_blog_allocations where allocation_id = 12 and role_id = 76 and blog_id in (select id from blogs where state in ('deployed', 'suspended'))";
+//    str = "select * from client_blog_allocations where allocation_id = 12 and role_id = 76 and blog_id in (select id from blogs where state in ('deployed', 'suspended'))";
+    String str = "SELECT CASE\n" +
+            "  WHEN (\n" +
+            "    (table_foo.compare_at_price IS NOT NULL)\n" +
+            "  AND\n" +
+            "    (table_foo.compare_at_price > table_foo.price)\n" +
+            "  ) THEN 1\n" +
+            "  ELSE 0\n" +
+            "END FROM foo";
     CharStream in = new ANTLRInputStream(str);
     SQLLexer lexer = new SQLLexer(in);
     CommonTokenStream tokens = new CommonTokenStream(lexer);
