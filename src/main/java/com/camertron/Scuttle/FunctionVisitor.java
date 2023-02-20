@@ -14,7 +14,8 @@ import java.util.List;
 public class FunctionVisitor extends ScuttleBaseVisitor {
   private String m_sFunctionName = "";
   private ArrayList<String> m_alArgList = new ArrayList<String>();
-  private boolean m_bIsAggregate = false;
+  private boolean m_bIsAggregate;
+  private boolean m_bDistinct;
 
   public FunctionVisitor(FromVisitor fmFromVisitor, AssociationResolver arResolver, ScuttleOptions sptOptions) {
     super(fmFromVisitor, arResolver, sptOptions);
@@ -101,6 +102,15 @@ public class FunctionVisitor extends ScuttleBaseVisitor {
     return null;
   }
 
+  @Override public Void visitSet_qualifier(@NotNull SQLParser.Set_qualifierContext ctx) {
+    if (ctx.DISTINCT() != null) {
+      m_bDistinct = true;
+    }
+
+    visitChildren(ctx);
+    return null;
+  }
+
   private void addArgument(String arg) {
     if (arg != null) {
       m_alArgList.add(ExpressionUtils.formatOperand(arg, false, m_sptOptions));
@@ -111,7 +121,13 @@ public class FunctionVisitor extends ScuttleBaseVisitor {
     String sFunctionCall;
 
     if (m_alArgList.size() == 1 && m_bIsAggregate) {
-      sFunctionCall = m_alArgList.get(0) + "." + m_sFunctionName.toLowerCase();
+      String functionName = m_sFunctionName.toLowerCase();
+      sFunctionCall = m_alArgList.get(0) + "." + functionName;
+
+      // count is a special aggregate function that accepts a `distinct` boolean argument
+      if (functionName.equals("count") && m_bDistinct) {
+        sFunctionCall += "(true)";
+      }
     } else {
       sFunctionCall = m_sptOptions.namespaceArelNodeClass("NamedFunction") + ".new(" +
         Utils.quote(m_sFunctionName.toUpperCase()) + ", " + Utils.arrayFormat(m_alArgList) +

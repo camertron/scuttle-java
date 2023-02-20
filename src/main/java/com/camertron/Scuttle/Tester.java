@@ -103,22 +103,28 @@ public class Tester {
 //    str = "SELECT row_number() OVER() AS id, COUNT(*) as session_count, FROM session_traffic_sources GROUP BY session_traffic_sources.traffic_source";
 //    str = "SELECT row_number() OVER() AS id, COUNT(*) as session_count FROM session_traffic_sources GROUP BY session_traffic_sources.traffic_source";
 //    str = "select * from client_blog_allocations where allocation_id = 12 and role_id = 76 and blog_id in (select id from blogs where state in ('deployed', 'suspended'))";
-    String str = "SELECT CASE\n" +
-            "  WHEN (\n" +
-            "    (table_foo.compare_at_price IS NOT NULL)\n" +
-            "  AND\n" +
-            "    (table_foo.compare_at_price > table_foo.price)\n" +
-            "  ) THEN 1\n" +
-            "  ELSE 0\n" +
-            "END FROM foo";
+//    String str = "SELECT CASE\n" +
+//            "  WHEN (\n" +
+//            "    (table_foo.compare_at_price IS NOT NULL)\n" +
+//            "  AND\n" +
+//            "    (table_foo.compare_at_price > table_foo.price)\n" +
+//            "  ) THEN 1\n" +
+//            "  ELSE 0\n" +
+//            "END FROM foo";
+//    String str = "SELECT foo -> 'a' FROM posts";
+//    String str = "SELECT COUNT(DISTINCT(id)) FROM posts";
+    String str = "SELECT blog_events.*\n" +
+            "FROM blog_events\n" +
+            "INNER JOIN events ON events.id = blog_events.event_id\n" +
+            "WHERE blog_events.created_at < DATE_SUB(now(),interval events.days_to_keep day)";
     CharStream in = new ANTLRInputStream(str);
     SQLLexer lexer = new SQLLexer(in);
     CommonTokenStream tokens = new CommonTokenStream(lexer);
     SQLParser parser = new SQLParser(tokens);
     SQLParser.SqlContext result = parser.sql();
     ScuttleOptions options = new ScuttleOptions();
-    options.useArelNodesPrefix(false);
-    options.useArelHelpers(true);
+    options.useArelNodesPrefix(true);
+    options.useArelHelpers(false);
     options.useRailsVersion("5.1.0");
     SqlStatementVisitor ssVisitor = new SqlStatementVisitor(manager.createResolver(), options);
     ssVisitor.visit(result);

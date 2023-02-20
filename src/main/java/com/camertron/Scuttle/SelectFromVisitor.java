@@ -13,6 +13,7 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
   private ScuttleOptions m_sptOptions;
   private ArrayList<JoinVisitor> m_alJoins = new ArrayList<JoinVisitor>();
   private SelectVisitor m_svSelectVisitor;
+  private SQLParser.Select_listContext m_slSelectList;
   private String m_sWhereClause = "";
   private OrderByVisitor m_obOrderByVisitor;
   private String m_sGroupByClause = "";
@@ -26,9 +27,7 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
   }
 
   @Override public Void visitSelect_list(@NotNull SQLParser.Select_listContext ctx) {
-    SelectVisitor selVisitor = new SelectVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
-    selVisitor.visit(ctx);
-    m_svSelectVisitor = selVisitor;
+    m_slSelectList = ctx;
     return null;
   }
 
@@ -46,6 +45,12 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
     fmVisitor.visit(ctx);
     m_fmFromVisitor = fmVisitor;
     m_alJoins.addAll(fmVisitor.getJoins());
+
+    // now that we've visited the FROM clause we can visit the column list
+    SelectVisitor selVisitor = new SelectVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
+    selVisitor.visit(m_slSelectList);
+    m_svSelectVisitor = selVisitor;
+
     return null;
   }
 
@@ -86,7 +91,7 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
 
   public String toString() {
     ArrayList<String> alStatements = new ArrayList<String>();
-    String sQuery = m_fmFromVisitor.getModelName() + ".select(" + m_svSelectVisitor.toString(m_fmFromVisitor) + ")";
+    String sQuery = m_fmFromVisitor.getModelName() + ".select(" + m_svSelectVisitor.toString() + ")";
 
     if (m_fmFromVisitor.hasSubquery()) {
       sQuery += ".from(" + m_fmFromVisitor.getSubquery();
@@ -120,7 +125,11 @@ public class SelectFromVisitor extends SQLParserBaseVisitor<Void> {
     }
 
     if (m_bDistinct) {
-      sQuery += ".uniq";
+      if (m_sptOptions.getRailsVersion().greaterThanOrEqualTo("4.0.0")) {
+        sQuery += ".distinct";
+      } else {
+        sQuery += ".uniq";
+      }
     }
 
     alStatements.add(sQuery);

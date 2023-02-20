@@ -360,6 +360,12 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
     return null;
   }
 
+  @Override public Void visitInterval_literal(SQLParser.Interval_literalContext ctx) {
+    String result = "INTERVAL " + ctx.interval_expression.getText() + " " + ctx.interval.getText();
+    m_stkOperandStack.push(new StringOperand("Arel::Nodes::SqlLiteral.new(" + Utils.quote(result) + ")"));
+    return null;
+  }
+
   private void processLeftRight(ParseTree ptLeft, ParseTree ptRight, TerminalNodeImpl tniOperator) {
     m_stkOperandStack.push(evaluateValueExpression(ptLeft));
 
@@ -418,7 +424,15 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
             String sSecondOperand = ExpressionUtils.formatOperand(odSecondOperand.toString(), false, m_sptOptions);
             Operand odFirstOperand = stkOperandStack.pop();
 
-            if (isMethodOperator(tniOperator)) {
+            if (isInfixOperator(tniOperator)) {
+              if (odFirstOperand.getClass() == ColumnOperand.class) {
+                ((ColumnOperand)odFirstOperand).setQualified(true);
+              }
+
+              String sFirstOperand = ExpressionUtils.formatOperand(odFirstOperand.toString(), true, m_sptOptions);
+              String statement = m_sptOptions.namespaceArelNodeClass("InfixOperation") + ".new(" + Utils.quote(tniOperator.getText()) + ", " + sFirstOperand + ", Arel::Nodes.build_quoted(" + sSecondOperand + "))";
+              stkOperandStack.push(StringOperand.fromString(statement));
+            } else if (isMethodOperator(tniOperator)) {
               if (odFirstOperand.getClass() == ColumnOperand.class) {
                 ((ColumnOperand)odFirstOperand).setQualified(true);
               }
@@ -445,9 +459,15 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
           case UNARY:
             switch (tniOperator.symbol.getType()) {
               case SQLParser.LEFT_PAREN:
+                Operand odOperand = stkOperandStack.pop();
+
+                if (odOperand.getClass() == ColumnOperand.class) {
+                  ((ColumnOperand)odOperand).setQualified(true);
+                }
+
                 stkOperandStack.push(
                   StringOperand.fromString(
-                    m_sptOptions.namespaceArelNodeClass("Group") + ".new(" + stkOperandStack.pop().toString() + ")"
+                    m_sptOptions.namespaceArelNodeClass("Group") + ".new(" + odOperand.toString() + ")"
                   )
                 );
 
@@ -509,6 +529,7 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       case SQLParser.IN:
       case SQLParser.NOT:
       case SQLParser.NULL:
+      case SQLParser.INFIX_OPERATOR:
         return OperatorType.BINARY;
       case SQLParser.LEFT_PAREN:
       case SQLParser.EXTRACT:  // extract is used to indicate a set of ruby parens
@@ -531,6 +552,10 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       default:
         return true;
     }
+  }
+
+  private boolean isInfixOperator(TerminalNodeImpl tniOperator) {
+    return tniOperator.symbol.getType() == SQLParser.INFIX_OPERATOR;
   }
 
   private String getMethodNameForOperator(TerminalNodeImpl tniOperator) {

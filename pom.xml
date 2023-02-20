@@ -13,7 +13,7 @@
       <groupId>com.camertron.SQLParser</groupId>
       <artifactId>SQLParser</artifactId>
       <scope>system</scope>
-      <systemPath>/Users/cdutro/workspace/SQLParser/out/artifacts/SQLParser.jar</systemPath>
+      <systemPath>/Users/camertron/workspace/camertron/SQLParser/out/artifacts/SQLParser.jar</systemPath>
       <version>1.0-SNAPSHOT</version>
     </dependency>
 
@@ -23,5 +23,9 @@
       <version>4.2</version>
     </dependency>
   </dependencies>
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+  </properties>
 
 </project>
