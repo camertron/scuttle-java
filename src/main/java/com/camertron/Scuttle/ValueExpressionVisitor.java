@@ -7,6 +7,7 @@ import org.antlr.v4.runtime.CommonToken;
 import org.antlr.v4.runtime.misc.Interval;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
 import java.util.ArrayList;
@@ -45,14 +46,25 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
 
     if (bpPartTwo != null) {
       String sPredicand = visitValueExpression(ctx.predicand);
-      String sBegin = visitValueExpression(bpPartTwo.begin);
-      String sEnd = visitValueExpression(bpPartTwo.end);
+      Operand opBegin = evaluateValueExpression(bpPartTwo.begin);
+      Operand opEnd = evaluateValueExpression(bpPartTwo.end);
 
       String sFinal = m_sptOptions.namespaceArelNodeClass("Between") + ".new(" + sPredicand + ", ";
-      sFinal += "(" + ExpressionUtils.formatOperand(sBegin, true, true, m_sptOptions) + ")";
-      sFinal += ".and(" + ExpressionUtils.formatOperand(sEnd, false, m_sptOptions) + "))";
 
-      m_stkOperandStack.push(StringOperand.fromString(sFinal));
+      switch (opBegin.getType()) {
+        case COLUMN:
+        case EXPRESSION:
+          sFinal += "(" + ExpressionUtils.formatOperand(opBegin.toString(), true, true, m_sptOptions) + ")";
+          sFinal += ".and(" + ExpressionUtils.formatOperand(opEnd.toString(), false, m_sptOptions) + "))";
+          break;
+
+        default:
+          String sBegin = ExpressionUtils.formatOperand(opBegin.toString(), false, false, m_sptOptions);
+          String sEnd = ExpressionUtils.formatOperand(opEnd.toString(), false, false, m_sptOptions);
+          sFinal += m_sptOptions.namespaceArelNodeClass("And") + ".new([" + sBegin + ", " + sEnd + "]))";
+      }
+
+      m_stkOperandStack.push(ExpressionOperand.fromString(sFinal));
     }
 
     return null;
@@ -131,21 +143,21 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
   @Override public Void visitSet_function_specification(@NotNull SQLParser.Set_function_specificationContext ctx) {
     FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     funcVisitor.visit(ctx);
-    m_stkOperandStack.push(StringOperand.fromString(funcVisitor.toString()));
+    m_stkOperandStack.push(ExpressionOperand.fromString(funcVisitor.toString()));
     return null;
   }
 
   @Override public Void visitRoutine_invocation(@NotNull SQLParser.Routine_invocationContext ctx) {
     FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     funcVisitor.visit(ctx);
-    m_stkOperandStack.push(StringOperand.fromString(funcVisitor.toString()));
+    m_stkOperandStack.push(ExpressionOperand.fromString(funcVisitor.toString()));
     return null;
   }
 
   @Override public Void visitAggregate_function(@NotNull SQLParser.Aggregate_functionContext ctx) {
     FunctionVisitor funcVisitor = new FunctionVisitor(m_fmFromVisitor, m_arResolver, m_sptOptions);
     funcVisitor.visit(ctx);
-    m_stkOperandStack.push(StringOperand.fromString(funcVisitor.toString()));
+    m_stkOperandStack.push(ExpressionOperand.fromString(funcVisitor.toString()));
     return null;
   }
 
@@ -182,15 +194,16 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       throw new RuntimeException("Could not determine window function type");
     }
 
-    m_stkOperandStack.push(StringOperand.fromString(operand + ".over"));
+    m_stkOperandStack.push(ExpressionOperand.fromString(operand + ".over"));
     return null;
   }
 
   @Override public Void visitNull_predicate(@NotNull SQLParser.Null_predicateContext ctx) {
-    if (ctx.n == null)
-      m_stkOperatorStack.push((TerminalNodeImpl)ctx.NULL());
-    else
-      m_stkOperatorStack.push((TerminalNodeImpl)ctx.NOT());
+    if (ctx.n == null) {
+      m_stkOperatorStack.push((TerminalNodeImpl) ctx.IS());
+    } else {
+      m_stkOperatorStack.push((TerminalNodeImpl) ctx.NOT());
+    }
 
     visitChildren(ctx);
     m_stkOperandStack.push(StringOperand.fromString("nil"));
@@ -198,8 +211,23 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
     return null;
   }
 
+  @Override public Void visitIs_clause(@NotNull SQLParser.Is_clauseContext ctx) {
+    TerminalNode operator = ctx.IS();
+
+    for (ParseTree child : ctx.children) {
+      if (child == ctx.NOT()) {
+        operator = ctx.NOT();
+        break;
+      }
+    }
+
+    m_stkOperatorStack.push((TerminalNodeImpl) operator);
+    m_stkOperandStack.push(StringOperand.fromString(ctx.t.getText().toLowerCase()));
+    return null;
+  }
+
   @Override public Void visitUnsigned_numeric_literal(@NotNull SQLParser.Unsigned_numeric_literalContext ctx) {
-    m_stkOperandStack.push(StringOperand.fromString(wrapLiteral(ctx.getText())));
+    m_stkOperandStack.push(NumericOperand.fromString(ctx.getText()));
     visitChildren(ctx);
     return null;
   }
@@ -390,10 +418,11 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
 
   public String toString() {
     Operand odResult = evaluate();
-    if (odResult == null)
+    if (odResult == null) {
       return null;
-    else
+    } else {
       return odResult.toString();
+    }
   }
 
   private String visitValueExpression(ParseTree exp) {
@@ -423,32 +452,37 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
             Operand odSecondOperand = stkOperandStack.pop();
             String sSecondOperand = ExpressionUtils.formatOperand(odSecondOperand.toString(), false, m_sptOptions);
             Operand odFirstOperand = stkOperandStack.pop();
+            String sFirstOperand = ExpressionUtils.formatOperand(odFirstOperand.toString(), true, m_sptOptions);
 
             if (isInfixOperator(tniOperator)) {
-              if (odFirstOperand.getClass() == ColumnOperand.class) {
-                ((ColumnOperand)odFirstOperand).setQualified(true);
+              String expression;
+
+              switch (odFirstOperand.getType()) {
+                case COLUMN:
+                  ((ColumnOperand)odFirstOperand).setQualified(true);
+                  sFirstOperand = ExpressionUtils.formatOperand(odFirstOperand.toString(), true, m_sptOptions);
+                case EXPRESSION:
+                  if (isMethodOperator(tniOperator)) {
+                    expression = sFirstOperand + "." + getMethodNameForOperator(tniOperator) + "(" + sSecondOperand + ")";
+                  } else {
+                    expression = sFirstOperand + " " + tniOperator.getText() + " " + sSecondOperand;
+                  }
+                  break;
+                default:
+                  switch(odSecondOperand.getType()) {
+                    case COLUMN:
+                    case EXPRESSION:
+                    case NUMERIC:
+                      expression = m_sptOptions.namespaceArelNodeClass("InfixOperation") + ".new(" + Utils.quote(tniOperator.getText()) + ", " + sFirstOperand + ", " + sSecondOperand + ")";
+                      break;
+                    default:
+                      expression = m_sptOptions.namespaceArelNodeClass("InfixOperation") + ".new(" + Utils.quote(tniOperator.getText()) + ", " + sFirstOperand + ", Arel::Nodes.build_quoted(" + sSecondOperand + "))";
+                      break;
+                  }
               }
 
-              String sFirstOperand = ExpressionUtils.formatOperand(odFirstOperand.toString(), true, m_sptOptions);
-              String statement = m_sptOptions.namespaceArelNodeClass("InfixOperation") + ".new(" + Utils.quote(tniOperator.getText()) + ", " + sFirstOperand + ", Arel::Nodes.build_quoted(" + sSecondOperand + "))";
-              stkOperandStack.push(StringOperand.fromString(statement));
-            } else if (isMethodOperator(tniOperator)) {
-              if (odFirstOperand.getClass() == ColumnOperand.class) {
-                ((ColumnOperand)odFirstOperand).setQualified(true);
-              }
-
-              String sFirstOperand = ExpressionUtils.formatOperand(
-                odFirstOperand.toString(), true, m_sptOptions
-              );
-
-              stkOperandStack.push(
-                StringOperand.fromString(
-                  sFirstOperand + "." + getMethodNameForOperator(tniOperator) + "(" + sSecondOperand + ")"
-                )
-              );
+              stkOperandStack.push(ExpressionOperand.fromString(expression));
             } else {
-              String sFirstOperand = ExpressionUtils.formatOperand(odFirstOperand.toString(), true, m_sptOptions);
-
               stkOperandStack.push(
                 StringOperand.fromString(
                   sFirstOperand + " " + tniOperator.getText() + " " + sSecondOperand
@@ -456,12 +490,14 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
               );
             }
 
+            break;
+
           case UNARY:
             switch (tniOperator.symbol.getType()) {
               case SQLParser.LEFT_PAREN:
                 Operand odOperand = stkOperandStack.pop();
 
-                if (odOperand.getClass() == ColumnOperand.class) {
+                if (odOperand.getType() == Operand.OperandType.COLUMN) {
                   ((ColumnOperand)odOperand).setQualified(true);
                 }
 
@@ -482,26 +518,26 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       // If this operand is going to be the left-hand side of an arel method call (eg. .eq())
       // then wrap it in a SqlLiteral via ExpressionUtils.formatOperand().
       Operand odOperand = stkOperandStack.pop();
-      Operand odFinal;
+      Operand odFinal = odOperand;
 
-      if (odOperand.getClass() == ColumnOperand.class) {
+      if (odOperand.getType() == Operand.OperandType.COLUMN) {
         if (m_bQualifyColumns)
           ((ColumnOperand)odOperand).setQualified(true);
       }
 
-      if (tniOperator == null) {
-        odFinal = odOperand;
-      } else {
-        odFinal = StringOperand.fromString(
-          ExpressionUtils.formatOperand(
-            odOperand.toString(), isMethodOperator(tniOperator), m_sptOptions
-          )
-        );
-      }
+//      if (tniOperator == null) {
+//        odFinal = odOperand;
+//      } else {
+//        odFinal = StringOperand.fromString(
+//          ExpressionUtils.formatOperand(
+//            odOperand.toString(), isMethodOperator(tniOperator), m_sptOptions
+//          )
+//        );
+//      }
 
       // The .as() method is not available on everything, most notably Arel::Nodes::Group. Watch out.
       if (m_sAlias != null) {
-        odFinal = StringOperand.fromString(
+        odFinal = ExpressionOperand.fromString(
           odOperand.toString() + ".as(" + Utils.quote(m_sAlias) + ")"
         );
       }
@@ -527,8 +563,9 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
       case SQLParser.AND:
       case SQLParser.OR:
       case SQLParser.IN:
+      case SQLParser.IS:
       case SQLParser.NOT:
-      case SQLParser.NULL:
+//      case SQLParser.NULL:
       case SQLParser.INFIX_OPERATOR:
         return OperatorType.BINARY;
       case SQLParser.LEFT_PAREN:
@@ -555,7 +592,27 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
   }
 
   private boolean isInfixOperator(TerminalNodeImpl tniOperator) {
-    return tniOperator.symbol.getType() == SQLParser.INFIX_OPERATOR;
+    switch (tniOperator.symbol.getType()) {
+      case SQLParser.PLUS:
+      case SQLParser.MINUS:
+      case SQLParser.DIVIDE:
+      case SQLParser.MULTIPLY:
+      case SQLParser.AND:
+      case SQLParser.OR:
+      case SQLParser.EQUAL:
+      case SQLParser.NOT_EQUAL:
+      case SQLParser.GTH:
+      case SQLParser.LTH:
+      case SQLParser.GEQ:
+      case SQLParser.LEQ:
+      case SQLParser.IN:
+      case SQLParser.IS:
+      case SQLParser.NOT:
+      case SQLParser.INFIX_OPERATOR:
+        return true;
+      default:
+        return false;
+    }
   }
 
   private String getMethodNameForOperator(TerminalNodeImpl tniOperator) {
@@ -564,9 +621,10 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
         return "and";
       case SQLParser.OR:
         return "or";
+      case SQLParser.IS:
       case SQLParser.EQUAL:
-      case SQLParser.NULL:
         return "eq";
+      case SQLParser.NOT:       // used to indicate IS NOT NULL
       case SQLParser.NOT_EQUAL:
         return "not_eq";
       case SQLParser.GTH:
@@ -579,8 +637,6 @@ public class ValueExpressionVisitor extends ScuttleBaseVisitor {
         return "lteq";
       case SQLParser.IN:
         return "in";
-      case SQLParser.NOT:
-        return "not_eq";  // used to indicate IS NOT NULL
       default:
         return null;
     }

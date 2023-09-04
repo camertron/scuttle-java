@@ -14,4 +14,9 @@ public class StringOperand implements Operand {
   public String toString() {
     return m_sValue;
   }
+
+  @Override
+  public OperandType getType() {
+    return OperandType.STRING;
+  }
 }

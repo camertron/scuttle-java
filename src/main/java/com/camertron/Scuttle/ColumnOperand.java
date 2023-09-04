@@ -19,6 +19,11 @@ public class ColumnOperand implements Operand {
       return m_cvColumn.toString();
   }
 
+  @Override
+  public OperandType getType() {
+    return OperandType.COLUMN;
+  }
+
   public void setQualified(boolean bQualified) {
     m_bQualified = bQualified;
   }
